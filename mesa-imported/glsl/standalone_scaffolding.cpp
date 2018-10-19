@@ -289,13 +289,19 @@ void initialize_context_to_defaults(struct gl_context *ctx, gl_api api)
    ctx->Const.Program[MESA_SHADER_COMPUTE].MaxOutputComponents = 0; /* not used */
 
    /* Set up default shader compiler options. */
+   // fincs-edit zone start
    struct gl_shader_compiler_options options;
    memset(&options, 0, sizeof(options));
    options.MaxUnrollIterations = 32;
-   options.MaxIfDepth = UINT_MAX;
+   options.MaxIfDepth = 16;
+   options.LowerBufferInterfaceBlocks = true;
+   options.LowerCombinedClipCullDistance = true;
 
    for (int sh = 0; sh < MESA_SHADER_STAGES; ++sh)
       memcpy(&ctx->Const.ShaderCompilerOptions[sh], &options, sizeof(options));
+
+   ctx->Const.ShaderCompilerOptions[MESA_SHADER_FRAGMENT].EmitNoIndirectOutput = true;
+   // fincs-edit zone end
 
    _mesa_locale_init();
 }
