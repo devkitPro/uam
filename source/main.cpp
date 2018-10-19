@@ -5,6 +5,8 @@
 #include "tgsi/tgsi_text.h"
 #include "codegen/nv50_ir_driver.h"
 
+#include "glsl_frontend.h"
+
 /* NOTE: Using a[0x270] in FP may cause an error even if we're using less than
  * 124 scalar varying values.
  */
@@ -176,6 +178,8 @@ void another_test(const char* glsl_source);
 
 int main(int argc, char* argv[])
 {
+	glsl_frontend_init();
+
 	printf("Hello, world!\n");
 
 	const char* glsl_source = R"(
@@ -256,7 +260,11 @@ void main()
 }
 )";
 
-	another_test(glsl_source);
+	glsl_program prg = glsl_program_create(glsl_source, pipeline_stage_vertex);
+	if (prg)
+	{
+		glsl_program_free(prg);
+	}
 
 	uint8_t type = PIPE_SHADER_FRAGMENT;
 	const char* tgsi_source = R"(
@@ -344,5 +352,6 @@ DCL OUT[0], COLOR
 		fclose(f);
 	}
 
+	glsl_frontend_exit();
 	return EXIT_SUCCESS;
 }

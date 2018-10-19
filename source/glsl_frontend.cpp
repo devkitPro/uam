@@ -17,6 +17,8 @@
 #include "main/mtypes.h"
 #include "program/program.h"
 
+#include "glsl_frontend.h"
+
 class dead_variable_visitor : public ir_hierarchical_visitor {
 public:
 	dead_variable_visitor()
@@ -186,11 +188,21 @@ initialize_context(struct gl_context *ctx, gl_api api)
 	ctx->Driver.NewProgram = new_program;
 }
 
-void another_test(const char* glsl_source)
-{
-	static struct gl_context gl_ctx;
-	initialize_context(&gl_ctx, API_OPENGL_CORE);
+static struct gl_context gl_ctx;
 
+void glsl_frontend_init()
+{
+	initialize_context(&gl_ctx, API_OPENGL_CORE);
+}
+
+void glsl_frontend_exit()
+{
+	_mesa_glsl_release_types();
+	_mesa_glsl_release_builtin_functions();
+}
+
+glsl_program glsl_program_create(const char* source, pipeline_stage stage)
+{
 	struct gl_shader_program *prg;
 
 	prg = rzalloc (NULL, struct gl_shader_program);
@@ -213,22 +225,40 @@ void another_test(const char* glsl_source)
 	prg->Shaders[prg->NumShaders] = shader;
 	prg->NumShaders++;
 
-	// TODO: this is hardcoded
-	shader->Type = GL_VERTEX_SHADER; //GL_FRAGMENT_SHADER;
+	switch (stage)
+	{
+		case pipeline_stage_vertex:
+			shader->Type = GL_VERTEX_SHADER;
+			break;
+		case pipeline_stage_tess_ctrl:
+			shader->Type = GL_TESS_CONTROL_SHADER;
+			break;
+		case pipeline_stage_tess_eval:
+			shader->Type = GL_TESS_EVALUATION_SHADER;
+			break;
+		case pipeline_stage_geometry:
+			shader->Type = GL_GEOMETRY_SHADER;
+			break;
+		case pipeline_stage_fragment:
+			shader->Type = GL_FRAGMENT_SHADER;
+			break;
+		case pipeline_stage_compute:
+			shader->Type = GL_COMPUTE_SHADER;
+			break;
+		default:
+			goto _fail;
+	}
 	shader->Stage = _mesa_shader_enum_to_shader_stage(shader->Type);
-	shader->Source = glsl_source;
+	shader->Source = source;
 
 	// "Compile" the shader
 	_mesa_glsl_compile_shader(&gl_ctx, shader, false, false, true);
-	if (shader->CompileStatus)
+	if (shader->CompileStatus != COMPILE_SUCCESS)
 	{
-		printf("Shader successfully compiled\n");
-	} else
-	{
-		printf("Shader failed to compile.\n");
-		if (shader->InfoLog && shader->InfoLog[0] != 0)
+		fprintf(stderr, "Shader failed to compile.\n");
+		if (shader->InfoLog && shader->InfoLog[0])
 			fprintf(stderr, "%s\n", shader->InfoLog);
-		return;
+		goto _fail;
 	}
 	_mesa_clear_shader_program_data(&gl_ctx, prg);
 
@@ -237,19 +267,42 @@ void another_test(const char* glsl_source)
 	if (prg->data->LinkStatus != LINKING_SUCCESS)
 	{
 		fprintf(stderr, "Shader failed to link.\n");
-		fprintf(stderr, "%s\n", prg->data->InfoLog);
+		if (prg->data->InfoLog && prg->data->InfoLog[0])
+			fprintf(stderr, "%s\n", prg->data->InfoLog);
+		goto _fail;
 	}
-	struct gl_linked_shader *linked_shader = prg->_LinkedShaders[shader->Stage];
-
-	// Do more optimizations
+	else
 	{
+		struct gl_linked_shader *linked_shader = prg->_LinkedShaders[shader->Stage];
+
+		// Do more optimizations
 		add_neg_to_sub_visitor v;
 		visit_list_elements(&v, linked_shader->ir);
 
 		dead_variable_visitor dv;
 		visit_list_elements(&dv, linked_shader->ir);
 		dv.remove_dead_variables();
+
+		// Print IR
+		_mesa_print_ir(stdout, linked_shader->ir, NULL);
+	}
+	return prg;
+
+_fail:
+	glsl_program_free(prg);
+	return NULL;
+}
+
+void glsl_program_free(glsl_program prg)
+{
+	for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+		if (prg->_LinkedShaders[i])
+			ralloc_free(prg->_LinkedShaders[i]->Program);
 	}
 
-	_mesa_print_ir(stdout, linked_shader->ir, NULL);
+	delete prg->AttributeBindings;
+	delete prg->FragDataBindings;
+	delete prg->FragDataIndexBindings;
+
+	ralloc_free(prg);
 }
