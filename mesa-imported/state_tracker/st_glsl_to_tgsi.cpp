@@ -7301,7 +7301,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
       return NULL;
    }
 
-#if 0 // fincs-edit: TODO
+#if 0 // fincs-edit
    struct st_vertex_program *stvp;
    struct st_fragment_program *stfp;
    struct st_common_program *stp;
@@ -7330,6 +7330,8 @@ get_mesa_program_tgsi(struct gl_context *ctx,
       assert(!"should not be reached");
       return NULL;
    }
+#else
+   attach_visitor_to_program(prog, v);
 #endif
 
    PRINT_STATS(v->print_stats());
@@ -7556,6 +7558,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
          get_mesa_program_tgsi(ctx, prog, shader);
       //st_set_prog_affected_state_flags(linked_prog); // fincs-edit
 
+#if 0 // fincs-edit
       if (linked_prog) {
          if (!ctx->Driver.ProgramStringNotify(ctx,
                                               _mesa_shader_stage_to_program(i),
@@ -7564,6 +7567,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
             return GL_FALSE;
          }
       }
+#endif
    }
 
    return GL_TRUE;

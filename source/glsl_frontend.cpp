@@ -16,6 +16,7 @@
 #include "glsl/opt_add_neg_to_sub.h"
 #include "main/mtypes.h"
 #include "program/program.h"
+#include "state_tracker/st_glsl_to_tgsi.h"
 
 #include "glsl_frontend.h"
 
@@ -75,6 +76,31 @@ private:
 	set *variables;
 };
 
+struct gl_program_with_tgsi : public gl_program
+{
+	struct glsl_to_tgsi_visitor *glsl_to_tgsi;
+
+	void cleanup()
+	{
+		if (glsl_to_tgsi)
+		{
+			free_glsl_to_tgsi_visitor(glsl_to_tgsi);
+			glsl_to_tgsi = NULL;
+		}
+	}
+
+	static gl_program_with_tgsi* from_ptr(void* p)
+	{
+		return static_cast<gl_program_with_tgsi*>(p);;
+	}
+};
+
+static void
+destroy_gl_program_with_tgsi(void* p)
+{
+	gl_program_with_tgsi::from_ptr(p)->cleanup();
+}
+
 static void
 init_gl_program(struct gl_program *prog, bool is_arb_asm)
 {
@@ -94,7 +120,8 @@ new_program(UNUSED struct gl_context *ctx, GLenum target,
 	case GL_TESS_EVALUATION_PROGRAM_NV:
 	case GL_FRAGMENT_PROGRAM_ARB:
 	case GL_COMPUTE_PROGRAM_NV: {
-		struct gl_program *prog = rzalloc(NULL, struct gl_program);
+		struct gl_program_with_tgsi *prog = rzalloc(NULL, struct gl_program_with_tgsi);
+		ralloc_set_destructor(prog, destroy_gl_program_with_tgsi);
 		init_gl_program(prog, is_arb_asm);
 		return prog;
 	}
@@ -102,6 +129,15 @@ new_program(UNUSED struct gl_context *ctx, GLenum target,
 		printf("bad target in new_program\n");
 		return NULL;
 	}
+}
+
+void
+attach_visitor_to_program(struct gl_program *prog, struct glsl_to_tgsi_visitor *v)
+{
+	gl_program_with_tgsi* prg = gl_program_with_tgsi::from_ptr(prog);
+	printf("This got called: %p\n", v);
+	prg->cleanup();
+	prg->glsl_to_tgsi = v;
 }
 
 static void
@@ -285,6 +321,13 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 
 		// Print IR
 		_mesa_print_ir(stdout, linked_shader->ir, NULL);
+
+		// Do the TGSI conversion
+		if (!st_link_shader(&gl_ctx, prg))
+		{
+			fprintf(stderr, "st_link_shader failed\n");
+			goto _fail;
+		}
 	}
 	return prg;
 

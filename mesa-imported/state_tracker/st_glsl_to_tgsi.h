@@ -58,6 +58,9 @@ void free_glsl_to_tgsi_visitor(struct glsl_to_tgsi_visitor *v);
 GLboolean st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
 
 void
+attach_visitor_to_program(struct gl_program *prog, struct glsl_to_tgsi_visitor *v); // fincs-edit
+
+void
 st_translate_stream_output_info(struct glsl_to_tgsi_visitor *glsl_to_tgsi,
                                 const ubyte outputMapping[],
                                 struct pipe_stream_output_info *so);
