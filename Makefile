@@ -22,8 +22,17 @@ endif
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source mesa-imported/codegen mesa-imported/tgsi mesa-imported/util mesa-imported/cso_cache
-INCLUDES	:=	include
+SOURCES		:=	source \
+				mesa-imported/codegen \
+				mesa-imported/tgsi \
+				mesa-imported/util \
+				mesa-imported/cso_cache \
+				mesa-imported/glsl \
+				mesa-imported/glsl/glcpp \
+				mesa-imported/compiler \
+				mesa-imported/program \
+				mesa-imported/main
+INCLUDES	:=	include mesa-imported
 
 #---------------------------------------------------------------------------------
 # options for code generation

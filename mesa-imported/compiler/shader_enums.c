@@ -28,7 +28,7 @@
 
 #include "shader_enums.h"
 #include "util/macros.h"
-#include "mesa/main/config.h"
+#include "main/config.h" // fincs-edit
 
 #define ENUM(x) [x] = #x
 #define NAME(val) ((((val) < ARRAY_SIZE(names)) && names[(val)]) ? names[(val)] : "UNKNOWN")
