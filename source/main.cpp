@@ -3,6 +3,8 @@
 #include <string.h>
 
 #include "tgsi/tgsi_text.h"
+#include "tgsi/tgsi_dump.h"
+
 #include "codegen/nv50_ir_driver.h"
 
 #include "glsl_frontend.h"
@@ -261,31 +263,18 @@ void main()
 )";
 
 	glsl_program prg = glsl_program_create(glsl_source, pipeline_stage_vertex);
-	if (prg)
+	if (!prg)
 	{
-		glsl_program_free(prg);
-	}
-
-	uint8_t type = PIPE_SHADER_FRAGMENT;
-	const char* tgsi_source = R"(
-FRAG
-DCL IN[0], GENERIC[0], PERSPECTIVE
-DCL IN[1], GENERIC[1], PERSPECTIVE
-DCL OUT[0], COLOR
-0: MUL OUT[0], IN[0], IN[1]
-1: END
-)";
-)";
-
-	struct tgsi_token tokens[4096];
-	if (!tgsi_text_translate(tgsi_source, tokens, ARRAY_SIZE(tokens)))
-	{
-		fprintf(stderr, "tgsi_text_translate fail\n");
+		glsl_frontend_exit();
 		return EXIT_FAILURE;
 	}
 
+	unsigned int num_tokens;
+	const struct tgsi_token* tokens = glsl_program_get_tokens(prg, num_tokens);
+	tgsi_dump_to_file(tokens, TGSI_DUMP_FLOAT_AS_HEX, stdout);
+
 	struct nv50_ir_prog_info info = {0};
-	info.type = type;
+	info.type = PIPE_SHADER_VERTEX;
 	info.target = 0x12b;
 	info.bin.sourceRep = PIPE_SHADER_IR_TGSI;
 	info.bin.source = tokens;
@@ -309,6 +298,7 @@ DCL OUT[0], COLOR
 	info.assignSlots = nvc0_program_assign_varying_slots;
 
 	int ret = nv50_ir_generate_code(&info);
+	glsl_program_free(prg);
 	if (ret) {
 		fprintf(stderr, "Error compiling program: %d\n", ret);
 		return ret;

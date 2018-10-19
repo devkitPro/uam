@@ -18,6 +18,11 @@
 #include "program/program.h"
 #include "state_tracker/st_glsl_to_tgsi.h"
 
+extern "C"
+{
+#include "tgsi/tgsi_parse.h"
+}
+
 #include "glsl_frontend.h"
 
 class dead_variable_visitor : public ir_hierarchical_visitor {
@@ -79,6 +84,8 @@ private:
 struct gl_program_with_tgsi : public gl_program
 {
 	struct glsl_to_tgsi_visitor *glsl_to_tgsi;
+	const tgsi_token *tgsi_tokens;
+	unsigned int tgsi_num_tokens;
 
 	void cleanup()
 	{
@@ -86,6 +93,12 @@ struct gl_program_with_tgsi : public gl_program
 		{
 			free_glsl_to_tgsi_visitor(glsl_to_tgsi);
 			glsl_to_tgsi = NULL;
+		}
+		if (tgsi_tokens)
+		{
+			tgsi_free_tokens(tgsi_tokens);
+			tgsi_tokens = NULL;
+			tgsi_num_tokens = 0;
 		}
 	}
 
@@ -135,9 +148,24 @@ void
 attach_visitor_to_program(struct gl_program *prog, struct glsl_to_tgsi_visitor *v)
 {
 	gl_program_with_tgsi* prg = gl_program_with_tgsi::from_ptr(prog);
-	printf("This got called: %p\n", v);
 	prg->cleanup();
 	prg->glsl_to_tgsi = v;
+}
+
+struct glsl_to_tgsi_visitor*
+_glsl_program_get_tgsi_visitor(struct gl_program *prog)
+{
+	return gl_program_with_tgsi::from_ptr(prog)->glsl_to_tgsi;
+}
+
+void
+_glsl_program_attach_tgsi_tokens(struct gl_program *prog, const tgsi_token *tokens, unsigned int num)
+{
+	gl_program_with_tgsi* prg = gl_program_with_tgsi::from_ptr(prog);
+	prg->cleanup();
+	printf("Setting %p (%u tokens)\n", tokens, num);
+	prg->tgsi_tokens = tokens;
+	prg->tgsi_num_tokens = num;
 }
 
 static void
@@ -221,6 +249,13 @@ initialize_context(struct gl_context *ctx, gl_api api)
 	ctx->Const.MaxUserAssignableUniformLocations =
 		4 * MESA_SHADER_STAGES * MAX_UNIFORMS;
 
+	// Actually fill out info
+	ctx->Const.MaxCombinedUniformBlocks = 16;
+	ctx->Const.MaxUniformBlockSize = 0x10000;
+	ctx->Const.Program[MESA_SHADER_VERTEX].MaxUniformComponents = 0x10000 / 4;
+	ctx->Const.Program[MESA_SHADER_VERTEX].MaxCombinedUniformComponents = (0x10000*16) / 4;
+	ctx->Const.Program[MESA_SHADER_VERTEX].MaxUniformBlocks = 16;
+
 	ctx->Driver.NewProgram = new_program;
 }
 
@@ -236,6 +271,9 @@ void glsl_frontend_exit()
 	_mesa_glsl_release_types();
 	_mesa_glsl_release_builtin_functions();
 }
+
+// Prototypes for translation functions
+bool tgsi_translate_vertex(struct gl_context *ctx, struct gl_program *prog);
 
 glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 {
@@ -320,12 +358,30 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 		dv.remove_dead_variables();
 
 		// Print IR
-		_mesa_print_ir(stdout, linked_shader->ir, NULL);
+		//_mesa_print_ir(stdout, linked_shader->ir, NULL);
 
 		// Do the TGSI conversion
 		if (!st_link_shader(&gl_ctx, prg))
 		{
 			fprintf(stderr, "st_link_shader failed\n");
+			goto _fail;
+		}
+
+		// TGSI generation
+		bool rc = false;
+		switch (stage)
+		{
+			case pipeline_stage_vertex:
+				rc = tgsi_translate_vertex(&gl_ctx, linked_shader->Program);
+				break;
+			default:
+				fprintf(stderr, "Unsupported stage\n");
+				goto _fail;
+		}
+
+		if (!rc)
+		{
+			fprintf(stderr, "Translation failed\n");
 			goto _fail;
 		}
 	}
@@ -334,6 +390,20 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 _fail:
 	glsl_program_free(prg);
 	return NULL;
+}
+
+const tgsi_token* glsl_program_get_tokens(glsl_program prg, unsigned int& num_tokens)
+{
+	struct gl_linked_shader *linked_shader = NULL;
+	for (int i = 0; !linked_shader && i < MESA_SHADER_STAGES; i ++)
+		linked_shader = prg->_LinkedShaders[i];
+	if (!linked_shader)
+		return NULL;
+
+	gl_program_with_tgsi* prog = gl_program_with_tgsi::from_ptr(linked_shader->Program);
+	num_tokens = prog->tgsi_num_tokens;
+	printf("Returning %p (%u tokens)\n", prog->tgsi_tokens, num_tokens);
+	return prog->tgsi_tokens;
 }
 
 void glsl_program_free(glsl_program prg)
