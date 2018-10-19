@@ -29,6 +29,7 @@
 #define TGSI_INFO_H
 
 #include "pipe/p_compiler.h"
+#include "pipe/p_defines.h" // fincs-edit
 #include "pipe/p_shader_tokens.h"
 #include "util/u_format.h"
 

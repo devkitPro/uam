@@ -31,6 +31,7 @@ SOURCES		:=	source \
 				mesa-imported/glsl/glcpp \
 				mesa-imported/compiler \
 				mesa-imported/program \
+				mesa-imported/state_tracker \
 				mesa-imported/main
 INCLUDES	:=	include mesa-imported
 
@@ -41,9 +42,9 @@ INCLUDES	:=	include mesa-imported
 CFLAGS	:=	$(PLAT_CFLAGS) \
 			-g -Wall -O2 -ffunction-sections
 
-CFLAGS	+=	$(INCLUDE) -DDESKTOP
+CFLAGS	+=	$(INCLUDE) -DDESKTOP -DNDEBUG
 
-CXXFLAGS	:= $(CFLAGS) -std=gnu++17
+CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -Wno-class-memaccess
 
 LDFLAGS	=	$(PLAT_LDFLAGS) -g -Wl,-Map,$(notdir $@).map -Wl,--gc-sections
 

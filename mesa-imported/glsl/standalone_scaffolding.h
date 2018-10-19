@@ -68,6 +68,11 @@ extern "C" void
 _mesa_clear_shader_program_data(struct gl_context *ctx,
                                 struct gl_shader_program *);
 
+// fincs-edit: this function was copied from mesa/shaderapi.c
+extern "C" void
+_mesa_copy_linked_program_data(const struct gl_shader_program *src,
+                               struct gl_linked_shader *dst_sh);
+
 extern "C" void
 _mesa_shader_debug(struct gl_context *ctx, GLenum type, GLuint *id,
                    const char *msg);
