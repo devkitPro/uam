@@ -10,6 +10,7 @@
 #include "glsl/standalone_scaffolding.h"
 #include "glsl/string_to_uint_map.h"
 #include "util/set.h"
+#include "glsl/linker.h"
 #include "glsl/glsl_parser_extras.h"
 #include "glsl/builtin_functions.h"
 #include "glsl/opt_add_neg_to_sub.h"
@@ -185,37 +186,6 @@ initialize_context(struct gl_context *ctx, gl_api api)
 	ctx->Driver.NewProgram = new_program;
 }
 
-static struct gl_linked_shader *
-fake_linking_step(void *mem_ctx, struct gl_context *ctx, struct gl_shader_program *prog, struct gl_shader *shader)
-{
-	if (!_mesa_get_main_function_signature(shader->symbols))
-	{
-		fprintf(stderr, "Failed to find the main function.\n");
-		return NULL;
-	}
-
-	gl_linked_shader *linked = rzalloc(NULL, struct gl_linked_shader);
-	linked->Stage = shader->Stage;
-
-	/* Create program and attach it to the linked shader */
-	struct gl_program *gl_prog = new_program(ctx, _mesa_shader_stage_to_program(shader->Stage), prog->Name, false);
-	if (!gl_prog) {
-		prog->data->LinkStatus = LINKING_FAILURE;
-		_mesa_delete_linked_shader(ctx, linked);
-		return NULL;
-	}
-
-	_mesa_reference_shader_program_data(ctx, &gl_prog->sh.data, prog->data);
-
-	/* Don't use _mesa_reference_program() just take ownership */
-	linked->Program = gl_prog;
-
-	linked->ir = new(linked) exec_list;
-	clone_ir_list(mem_ctx, linked->ir, shader->ir);
-
-	return linked;
-}
-
 void another_test(const char* glsl_source)
 {
 	static struct gl_context gl_ctx;
@@ -260,21 +230,16 @@ void another_test(const char* glsl_source)
 			fprintf(stderr, "%s\n", shader->InfoLog);
 		return;
 	}
-
-	// "Link" the shader
-	const gl_shader_stage stage = shader->Stage;
 	_mesa_clear_shader_program_data(&gl_ctx, prg);
-	prg->data->LinkStatus = LINKING_SUCCESS;
-	gl_linked_shader* linked_shader = fake_linking_step(prg, &gl_ctx, prg, shader);
-	prg->_LinkedShaders[stage] = linked_shader;
 
-	// Optimize the shader
-	struct gl_shader_compiler_options *const compiler_options = &gl_ctx.Const.ShaderCompilerOptions[stage];
-	bool progress = false;
-	do {
-		//progress = do_function_inlining(linked_shader->ir);
-		progress = do_common_optimization(linked_shader->ir, /*false*/ true, false, compiler_options, true) && progress;
-	} while(progress);
+	// Link the shader
+	link_shaders(&gl_ctx, prg);
+	if (prg->data->LinkStatus != LINKING_SUCCESS)
+	{
+		fprintf(stderr, "Shader failed to link.\n");
+		fprintf(stderr, "%s\n", prg->data->InfoLog);
+	}
+	struct gl_linked_shader *linked_shader = prg->_LinkedShaders[shader->Stage];
 
 	// Do more optimizations
 	{

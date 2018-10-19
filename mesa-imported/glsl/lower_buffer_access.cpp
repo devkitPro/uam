@@ -36,50 +36,7 @@
 #include "main/macros.h"
 #include "util/list.h"
 #include "glsl_parser_extras.h"
-//#include "linker.h" // fincs-edit
-
-// fincs-edit: copied from link_uniforms.cpp
-unsigned
-link_calculate_matrix_stride(const glsl_type *matrix, bool row_major,
-                             enum glsl_interface_packing packing)
-{
-   const unsigned N = matrix->is_double() ? 8 : 4;
-   const unsigned items =
-      row_major ? matrix->matrix_columns : matrix->vector_elements;
-
-   assert(items <= 4);
-
-   /* Matrix stride for std430 mat2xY matrices are not rounded up to
-    * vec4 size.
-    *
-    * Section 7.6.2.2 "Standard Uniform Block Layout" of the OpenGL 4.3 spec
-    * says:
-    *
-    *    2. If the member is a two- or four-component vector with components
-    *       consuming N basic machine units, the base alignment is 2N or 4N,
-    *       respectively.
-    *    ...
-    *    4. If the member is an array of scalars or vectors, the base
-    *       alignment and array stride are set to match the base alignment of
-    *       a single array element, according to rules (1), (2), and (3), and
-    *       rounded up to the base alignment of a vec4.
-    *    ...
-    *    7. If the member is a row-major matrix with C columns and R rows, the
-    *       matrix is stored identically to an array of R row vectors with C
-    *       components each, according to rule (4).
-    *    ...
-    *
-    *    When using the std430 storage layout, shader storage blocks will be
-    *    laid out in buffer storage identically to uniform and shader storage
-    *    blocks using the std140 layout, except that the base alignment and
-    *    stride of arrays of scalars and vectors in rule 4 and of structures
-    *    in rule 9 are not rounded up a multiple of the base alignment of a
-    *    vec4.
-    */
-   return packing == GLSL_INTERFACE_PACKING_STD430
-      ? (items < 3 ? items * N : glsl_align(items * N, 16))
-      : glsl_align(items * N, 16);
-}
+#include "linker.h"
 
 using namespace ir_builder;
 

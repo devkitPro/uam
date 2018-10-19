@@ -122,7 +122,7 @@
  */
 #include "ir.h"
 #include "glsl_parser_extras.h"
-//#include "linker.h" // fincs-edit
+#include "linker.h"
 #include "util/hash_table.h"
 #include "program.h"
 
@@ -291,7 +291,6 @@ emit_errors_unlinked(const void *key, void *data, void *closure)
 }
 
 
-#if 0 // // fincs-edit
 static void
 emit_errors_linked(const void *key, void *data, void *closure)
 {
@@ -308,7 +307,6 @@ emit_errors_linked(const void *key, void *data, void *closure)
    linker_error(prog, "function `%s' has static recursion.\n", proto);
    ralloc_free(proto);
 }
-#endif
 
 
 void
@@ -337,7 +335,6 @@ detect_recursion_unlinked(struct _mesa_glsl_parse_state *state,
 }
 
 
-#if 0 // // fincs-edit
 void
 detect_recursion_linked(struct gl_shader_program *prog,
 			exec_list *instructions)
@@ -362,4 +359,3 @@ detect_recursion_linked(struct gl_shader_program *prog,
     */
    hash_table_call_foreach(v.function_hash, emit_errors_linked, prog);
 }
-#endif

@@ -33,7 +33,7 @@
 
 #include "lower_buffer_access.h"
 #include "ir_builder.h"
-//#include "linker.h" // fincs-edit
+#include "linker.h"
 #include "main/macros.h"
 #include "util/list.h"
 #include "glsl_parser_extras.h"
@@ -510,7 +510,7 @@ lower_shared_reference(struct gl_context *ctx,
     *    MAX_COMPUTE_SHARED_MEMORY_SIZE."
     */
    if (prog->Comp.SharedSize > ctx->Const.MaxComputeSharedMemorySize) {
-      /*linker_error(prog,*/ fprintf(stderr, "Too much shared memory used (%u/%u)\n", // fincs-edit
+      linker_error(prog, "Too much shared memory used (%u/%u)\n",
                    prog->Comp.SharedSize,
                    ctx->Const.MaxComputeSharedMemorySize);
    }

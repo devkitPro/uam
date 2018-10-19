@@ -40,7 +40,7 @@
 #include "ir_hierarchical_visitor.h"
 #include "ir.h"
 #include "ir_builder.h"
-//#include "linker.h" // fincs-edit
+#include "linker.h"
 #include "program/prog_statevars.h"
 #include "builtin_functions.h"
 #include "main/mtypes.h"
