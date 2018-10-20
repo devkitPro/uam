@@ -7048,9 +7048,10 @@ st_translate_program(
          enum tgsi_return_type type =
             st_translate_texture_type(program->sampler_types[i]);
 
-         t->samplers[i] = ureg_DECL_sampler(ureg, i);
+         GLubyte unit = program->shader->Program->SamplerUnits[i]; // fincs-edit
+         t->samplers[i] = ureg_DECL_sampler(ureg, unit); // fincs-edit
 
-         ureg_DECL_sampler_view(ureg, i, program->sampler_targets[i],
+         ureg_DECL_sampler_view(ureg, unit, program->sampler_targets[i], // fincs-edit
                                 type, type, type, type);
       }
    }
@@ -7090,7 +7091,7 @@ st_translate_program(
 
    for (i = 0; i < program->shader->Program->info.num_images; i++) {
       if (program->images_used & (1 << i)) {
-         t->images[i] = ureg_DECL_image(ureg, i,
+         t->images[i] = ureg_DECL_image(ureg, program->shader->Program->sh.ImageUnits[i], // fincs-edit
                                         program->image_targets[i],
                                         program->image_formats[i],
                                         program->image_wr[i],
