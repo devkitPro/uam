@@ -163,7 +163,6 @@ _glsl_program_attach_tgsi_tokens(struct gl_program *prog, const tgsi_token *toke
 {
 	gl_program_with_tgsi* prg = gl_program_with_tgsi::from_ptr(prog);
 	prg->cleanup();
-	printf("Setting %p (%u tokens)\n", tokens, num);
 	prg->tgsi_tokens = tokens;
 	prg->tgsi_num_tokens = num;
 }
@@ -402,7 +401,6 @@ const tgsi_token* glsl_program_get_tokens(glsl_program prg, unsigned int& num_to
 
 	gl_program_with_tgsi* prog = gl_program_with_tgsi::from_ptr(linked_shader->Program);
 	num_tokens = prog->tgsi_num_tokens;
-	printf("Returning %p (%u tokens)\n", prog->tgsi_tokens, num_tokens);
 	return prog->tgsi_tokens;
 }
 

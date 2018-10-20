@@ -182,7 +182,6 @@ int main(int argc, char* argv[])
 {
 	glsl_frontend_init();
 
-	printf("Hello, world!\n");
 
 	const char* glsl_source = R"(
 #version 330 core

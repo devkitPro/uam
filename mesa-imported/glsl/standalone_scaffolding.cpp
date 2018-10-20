@@ -290,6 +290,7 @@ void initialize_context_to_defaults(struct gl_context *ctx, gl_api api)
 
    /* Set up default shader compiler options. */
    // fincs-edit zone start
+   // See st_init_limits in st_extensions.c
    struct gl_shader_compiler_options options;
    memset(&options, 0, sizeof(options));
    options.MaxUnrollIterations = 32;
