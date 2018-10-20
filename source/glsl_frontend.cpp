@@ -115,9 +115,10 @@ destroy_gl_program_with_tgsi(void* p)
 }
 
 static void
-init_gl_program(struct gl_program *prog, bool is_arb_asm)
+init_gl_program(struct gl_program *prog, GLenum target, bool is_arb_asm)
 {
 	prog->RefCount = 1;
+	prog->Target = target;
 	prog->Format = GL_PROGRAM_FORMAT_ASCII_ARB;
 	prog->is_arb_asm = is_arb_asm;
 }
@@ -135,7 +136,7 @@ new_program(UNUSED struct gl_context *ctx, GLenum target,
 	case GL_COMPUTE_PROGRAM_NV: {
 		struct gl_program_with_tgsi *prog = rzalloc(NULL, struct gl_program_with_tgsi);
 		ralloc_set_destructor(prog, destroy_gl_program_with_tgsi);
-		init_gl_program(prog, is_arb_asm);
+		init_gl_program(prog, target, is_arb_asm);
 		return prog;
 	}
 	default:
@@ -249,6 +250,7 @@ initialize_context(struct gl_context *ctx, gl_api api)
 		4 * MESA_SHADER_STAGES * MAX_UNIFORMS;
 
 	// Actually fill out info
+	ctx->Const.NativeIntegers = GL_TRUE;
 	ctx->Const.MaxCombinedUniformBlocks = 16;
 	ctx->Const.MaxUniformBlockSize = 0x10000;
 	ctx->Const.Program[MESA_SHADER_VERTEX].MaxUniformComponents = 0x10000 / 4;

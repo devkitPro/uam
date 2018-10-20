@@ -109,7 +109,7 @@ bool tgsi_translate_vertex(struct gl_context *ctx, struct gl_program *prog)
 	if (error != PIPE_OK)
 	{
 		ureg_destroy(ureg);
-		return NULL;
+		return false;
 	}
 
 	// We get back the tgsi!!
