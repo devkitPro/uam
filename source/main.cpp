@@ -183,6 +183,7 @@ int main(int argc, char* argv[])
 	glsl_frontend_init();
 
 
+	pipeline_stage stage = pipeline_stage_vertex;
 	const char* glsl_source = R"(
 #version 330 core
 #extension GL_ARB_separate_shader_objects : enable
@@ -261,7 +262,7 @@ void main()
 }
 )";
 
-	glsl_program prg = glsl_program_create(glsl_source, pipeline_stage_vertex);
+	glsl_program prg = glsl_program_create(glsl_source, stage);
 	if (!prg)
 	{
 		glsl_frontend_exit();
@@ -273,7 +274,28 @@ void main()
 	tgsi_dump_to_file(tokens, TGSI_DUMP_FLOAT_AS_HEX, stdout);
 
 	struct nv50_ir_prog_info info = {0};
-	info.type = PIPE_SHADER_VERTEX;
+	switch (stage)
+	{
+		default:
+		case pipeline_stage_vertex:
+			info.type = PIPE_SHADER_VERTEX;
+			break;
+		case pipeline_stage_tess_ctrl:
+			info.type = PIPE_SHADER_TESS_CTRL;
+			break;
+		case pipeline_stage_tess_eval:
+			info.type = PIPE_SHADER_TESS_EVAL;
+			break;
+		case pipeline_stage_geometry:
+			info.type = PIPE_SHADER_GEOMETRY;
+			break;
+		case pipeline_stage_fragment:
+			info.type = PIPE_SHADER_FRAGMENT;
+			break;
+		case pipeline_stage_compute:
+			info.type = PIPE_SHADER_COMPUTE;
+			break;
+	}
 	info.target = 0x12b;
 	info.bin.sourceRep = PIPE_SHADER_IR_TGSI;
 	info.bin.source = tokens;

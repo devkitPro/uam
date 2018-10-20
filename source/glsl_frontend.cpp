@@ -282,6 +282,7 @@ void glsl_frontend_exit()
 
 // Prototypes for translation functions
 bool tgsi_translate_vertex(struct gl_context *ctx, struct gl_program *prog);
+bool tgsi_translate_fragment(struct gl_context *ctx, struct gl_program *prog);
 
 glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 {
@@ -381,6 +382,9 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 		{
 			case pipeline_stage_vertex:
 				rc = tgsi_translate_vertex(&gl_ctx, linked_shader->Program);
+				break;
+			case pipeline_stage_fragment:
+				rc = tgsi_translate_fragment(&gl_ctx, linked_shader->Program);
 				break;
 			default:
 				fprintf(stderr, "Unsupported stage\n");
