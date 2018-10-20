@@ -3,3 +3,8 @@ build/
 *~
 *.exe
 *.bak
+*.bat
+*.bin
+*.glsl
+*.tgsi
+*.txt
