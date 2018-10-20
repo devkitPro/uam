@@ -206,7 +206,7 @@ initialize_context(struct gl_context *ctx, gl_api api)
 	ctx->Const.MaxLights = 8;
 	ctx->Const.MaxTextureCoordUnits = 8;
 	ctx->Const.MaxTextureUnits = 2;
-	ctx->Const.MaxUniformBufferBindings = 84;
+	ctx->Const.MaxUniformBufferBindings = 16;
 	ctx->Const.MaxVertexStreams = 4;
 	ctx->Const.MaxTransformFeedbackBuffers = 4;
 

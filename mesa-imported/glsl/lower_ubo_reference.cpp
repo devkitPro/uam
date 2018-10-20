@@ -303,7 +303,7 @@ lower_ubo_reference_visitor::setup_for_load_or_store(void *mem_ctx,
    for (unsigned i = 0; i < num_blocks; i++) {
       if (strcmp(field_name, blocks[i]->Name) == 0) {
 
-         ir_constant *index = new(mem_ctx) ir_constant(i);
+         ir_constant *index = new(mem_ctx) ir_constant(/*i*/ blocks[i]->Binding); // fincs-edit
 
          if (nonconst_block_index) {
             this->uniform_block = add(nonconst_block_index, index);

@@ -7016,12 +7016,13 @@ st_translate_program(
 
    for (i = 0; i < proginfo->info.num_ubos; i++) {
       unsigned size = proginfo->sh.UniformBlocks[i]->UniformBufferSize;
+      unsigned binding = proginfo->sh.UniformBlocks[i]->Binding; // fincs-edit
       unsigned num_const_vecs = (size + 15) / 16;
       unsigned first, last;
       assert(num_const_vecs > 0);
       first = 0;
       last = num_const_vecs > 0 ? num_const_vecs - 1 : 0;
-      ureg_DECL_constant2D(t->ureg, first, last, i + 1);
+      ureg_DECL_constant2D(t->ureg, first, last, /*i*/ binding + 1); // fincs-edit
    }
 
    /* Emit immediate values.

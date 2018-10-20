@@ -276,6 +276,10 @@ process_block_array_leaf(const char *name,
    blocks[i].Name = ralloc_strdup(blocks, name);
    blocks[i].Uniforms = &variables[(*parcel).index];
 
+   if (!b->has_binding) { // fincs-edit
+      linker_error(prog, "block `%s' has no binding\n", b->type->name);
+   }
+
    /* The ARB_shading_language_420pack spec says:
     *
     *    If the binding identifier is used with a uniform block instanced as
