@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <getopt.h>
 
 #include "tgsi/tgsi_text.h"
 #include "tgsi/tgsi_dump.h"
@@ -176,93 +177,98 @@ nvc0_program_assign_varying_slots(struct nv50_ir_prog_info *info)
 	return ret;
 }
 
-void another_test(const char* glsl_source);
+static int usage(const char* prog)
+{
+	fprintf(stderr,
+		"Usage: %s [options] file\n"
+		"Options:\n"
+		"  -o, --out=<file>   Specifies the name of the output file to generate\n"
+		"  -s, --stage=<name> Specifies the pipeline stage of the shader\n"
+		"                     (vert, tess_ctrl, tess_eval, geom, frag, comp)\n"
+		"  -v, --version      Displays version information\n"
+		, prog);
+	return EXIT_FAILURE;
+}
+
 
 int main(int argc, char* argv[])
 {
+	const char *inFile = nullptr, *outFile = nullptr, *stageName = nullptr;
+
+	static struct option long_options[] =
+	{
+		{ "out",     required_argument, NULL, 'o' },
+		{ "stage",   required_argument, NULL, 's' },
+		{ "help",    no_argument,       NULL, '?' },
+		{ "version", no_argument,       NULL, 'v' },
+		{ NULL, 0, NULL, 0 }
+	};
+
+	int opt, optidx = 0;
+	while ((opt = getopt_long(argc, argv, "o:s:?v", long_options, &optidx)) != -1)
+	{
+		switch (opt)
+		{
+			case 'o': outFile = optarg; break;
+			case 's': stageName = optarg; break;
+			case '?': usage(argv[0]); return EXIT_SUCCESS;
+			case 'v': printf("%s - Built on %s %s\n", "unholy_abomination_of_mankind", __DATE__, __TIME__); return EXIT_SUCCESS;
+			default:  return usage(argv[0]);
+		}
+	}
+
+	if ((argc-optind) != 1)
+		return usage(argv[0]);
+	inFile = argv[optind];
+
+	if (!stageName)
+	{
+		fprintf(stderr, "Missing pipeline stage argument (--stage)\n");
+		return EXIT_FAILURE;
+	}
+
+	if (!outFile)
+	{
+		fprintf(stderr, "Missing output file argument (--out)\n");
+		return EXIT_FAILURE;
+	}
+
+	pipeline_stage stage;
+	if (0) ((void)0);
+#define TEST_STAGE(_str,_val) else if (strcmp(stageName,(_str))==0) stage = (_val)
+	TEST_STAGE("vert", pipeline_stage_vertex);
+	TEST_STAGE("tess_ctrl", pipeline_stage_tess_ctrl);
+	TEST_STAGE("tess_eval", pipeline_stage_tess_eval);
+	TEST_STAGE("geom", pipeline_stage_geometry);
+	TEST_STAGE("frag", pipeline_stage_fragment);
+	TEST_STAGE("comp", pipeline_stage_compute);
+#undef TEST_STAGE
+	else
+	{
+		fprintf(stderr, "Unrecognized pipeline stage: `%s'\n", stageName);
+		return EXIT_FAILURE;
+	}
+
+	FILE* fin = fopen(inFile, "rb");
+	if (!fin)
+	{
+		fprintf(stderr, "Could not open input file: %s\n", inFile);
+		return EXIT_FAILURE;
+	}
+
+	fseek(fin, 0, SEEK_END);
+	long fsize = ftell(fin);
+	rewind(fin);
+
+	char* glsl_source = new char[fsize+1];
+	fread(glsl_source, 1, fsize, fin);
+	fclose(fin);
+	glsl_source[fsize] = 0;
+
 	glsl_frontend_init();
 
-
-	pipeline_stage stage = pipeline_stage_vertex;
-	const char* glsl_source = R"(
-#version 330 core
-#extension GL_ARB_separate_shader_objects : enable
-#extension GL_ARB_shading_language_420pack : enable
-
-out gl_PerVertex
-{
-	vec4 gl_Position;
-};
-
-layout (location = 0) in int inAttr;
-
-layout (location = 0) out vec4 outColor;
-layout (location = 1) out vec3 outUV;
-
-uniform ivec2 dimensions;
-uniform vec4 palettes[16] = vec4[](
-	vec4(0.0, 0.0, 0.0, 1.0),
-	vec4(0.5, 0.0, 0.0, 1.0),
-	vec4(0.0, 0.5, 0.0, 1.0),
-	vec4(0.5, 0.5, 0.0, 1.0),
-	vec4(0.0, 0.0, 0.5, 1.0),
-	vec4(0.5, 0.0, 0.5, 1.0),
-	vec4(0.0, 0.5, 0.5, 1.0),
-	vec4(0.75, 0.75, 0.75, 1.0),
-	vec4(0.5, 0.5, 0.5, 1.0),
-	vec4(1.0, 0.0, 0.0, 1.0),
-	vec4(0.0, 1.0, 0.0, 1.0),
-	vec4(1.0, 1.0, 0.0, 1.0),
-	vec4(0.0, 0.0, 1.0, 1.0),
-	vec4(1.0, 0.0, 1.0, 1.0),
-	vec4(0.0, 1.0, 1.0, 1.0),
-	vec4(1.0, 1.0, 1.0, 1.0)
-);
-
-const vec2 builtin_vertices[] = vec2[](
-	vec2(0.0, 0.0),
-	vec2(0.0, -1.0),
-	vec2(1.0, -1.0),
-	vec2(0.0, 0.0),
-	vec2(1.0, -1.0),
-	vec2(1.0, 0.0)
-);
-
-void main()
-{
-	// Extract data from the attribute
-	float tileId = float(inAttr & 0x3FF);
-	bool hFlip = ((inAttr >> 10) & 1) != 0;
-	bool vFlip = ((inAttr >> 11) & 1) != 0;
-	int palId = (inAttr >> 12) & 0xF;
-
-	vec2 vtxData = builtin_vertices[gl_VertexID];
-
-	// Position
-	float tileRow = floor(float(gl_InstanceID) / dimensions.x);
-	float tileCol = float(gl_InstanceID) - tileRow*dimensions.x;
-	vec2 basePos;
-	basePos.x = 2.0 * tileCol / dimensions.x - 1.0;
-	basePos.y = 2.0 * (1.0 - tileRow / dimensions.y) - 1.0;
-
-	vec2 offsetPos = vec2(2.0) / vec2(dimensions.xy);
-	gl_Position.xy = basePos + offsetPos * vtxData;
-	gl_Position.zw = vec2(0.0, 1.0);
-
-	// Color
-	outColor = palettes[palId];
-
-	// UVs
-	if (hFlip)
-		vtxData.x = 1.0 - vtxData.x;
-	if (vFlip)
-		vtxData.y = -1.0 - vtxData.y;
-	outUV.xy = vec2(0.0,1.0) + vtxData;
-	outUV.z  = tileId;
-}
-)";
-
 	glsl_program prg = glsl_program_create(glsl_source, stage);
+	delete[] glsl_source;
 	if (!prg)
 	{
 		glsl_frontend_exit();
@@ -337,7 +343,7 @@ void main()
 		printf("\n");
 	*/
 
-	FILE* f = fopen("program.bin", "wb");
+	FILE* f = fopen(outFile, "wb");
 	if (f)
 	{
 		fwrite(info.bin.code, 1, info.bin.codeSize, f);
