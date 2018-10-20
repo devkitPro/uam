@@ -213,96 +213,111 @@ void initialize_context_to_defaults(struct gl_context *ctx, gl_api api)
 
    ctx->Extensions.dummy_false = false;
    ctx->Extensions.dummy_true = true;
-   ctx->Extensions.ARB_compute_shader = true;
-   ctx->Extensions.ARB_compute_variable_group_size = true;
-   ctx->Extensions.ARB_conservative_depth = true;
-   ctx->Extensions.ARB_draw_instanced = true;
-   ctx->Extensions.ARB_ES2_compatibility = true;
-   ctx->Extensions.ARB_ES3_compatibility = true;
-   ctx->Extensions.ARB_explicit_attrib_location = true;
-   ctx->Extensions.ARB_fragment_coord_conventions = true;
-   ctx->Extensions.ARB_fragment_layer_viewport = true;
-   ctx->Extensions.ARB_gpu_shader5 = true;
-   ctx->Extensions.ARB_gpu_shader_fp64 = true;
-   ctx->Extensions.ARB_gpu_shader_int64 = true;
-   ctx->Extensions.ARB_sample_shading = true;
-   ctx->Extensions.ARB_shader_bit_encoding = true;
-   ctx->Extensions.ARB_shader_draw_parameters = true;
-   ctx->Extensions.ARB_shader_stencil_export = true;
-   ctx->Extensions.ARB_shader_texture_lod = true;
-   ctx->Extensions.ARB_shading_language_420pack = true;
-   ctx->Extensions.ARB_shading_language_packing = true;
-   ctx->Extensions.ARB_tessellation_shader = true;
-   ctx->Extensions.ARB_texture_cube_map_array = true;
-   ctx->Extensions.ARB_texture_gather = true;
-   ctx->Extensions.ARB_texture_multisample = true;
-   ctx->Extensions.ARB_texture_query_levels = true;
-   ctx->Extensions.ARB_texture_query_lod = true;
-   ctx->Extensions.ARB_uniform_buffer_object = true;
-   ctx->Extensions.ARB_viewport_array = true;
-   ctx->Extensions.ARB_cull_distance = true;
-   ctx->Extensions.ARB_bindless_texture = true;
 
-   ctx->Extensions.OES_EGL_image_external = true;
-   ctx->Extensions.OES_standard_derivatives = true;
+   // fincs-edit block start
+   // Adapted from st_init_extensions
 
-   ctx->Extensions.EXT_shader_integer_mix = true;
-   ctx->Extensions.EXT_texture_array = true;
+   // Extensions that are supported by all Gallium drivers
+   ctx->Extensions.ARB_ES2_compatibility = GL_TRUE;
+   ctx->Extensions.ARB_depth_texture = GL_TRUE;
+   ctx->Extensions.ARB_draw_elements_base_vertex = GL_TRUE;
+   ctx->Extensions.ARB_explicit_attrib_location = GL_TRUE;
+   ctx->Extensions.ARB_explicit_uniform_location = GL_TRUE;
+   ctx->Extensions.ARB_fragment_coord_conventions = GL_TRUE;
+   ctx->Extensions.ARB_fragment_program = GL_TRUE;
+   ctx->Extensions.ARB_fragment_program_shadow = GL_TRUE;
+   ctx->Extensions.ARB_fragment_shader = GL_TRUE;
+   ctx->Extensions.ARB_half_float_vertex = GL_TRUE;
+   ctx->Extensions.ARB_internalformat_query = GL_TRUE;
+   ctx->Extensions.ARB_internalformat_query2 = GL_TRUE;
+   ctx->Extensions.ARB_map_buffer_range = GL_TRUE;
+   ctx->Extensions.ARB_shadow = GL_TRUE;
+   ctx->Extensions.ARB_sync = GL_TRUE;
+   ctx->Extensions.ARB_texture_border_clamp = GL_TRUE;
+   ctx->Extensions.ARB_texture_cube_map = GL_TRUE;
+   ctx->Extensions.ARB_texture_env_combine = GL_TRUE;
+   ctx->Extensions.ARB_texture_env_crossbar = GL_TRUE;
+   ctx->Extensions.ARB_texture_env_dot3 = GL_TRUE;
+   ctx->Extensions.ARB_vertex_program = GL_TRUE;
+   ctx->Extensions.ARB_vertex_shader = GL_TRUE;
+   ctx->Extensions.EXT_blend_color = GL_TRUE;
+   ctx->Extensions.EXT_blend_func_separate = GL_TRUE;
+   ctx->Extensions.EXT_blend_minmax = GL_TRUE;
+   ctx->Extensions.EXT_gpu_program_parameters = GL_TRUE;
+   ctx->Extensions.EXT_pixel_buffer_object = GL_TRUE;
+   ctx->Extensions.EXT_point_parameters = GL_TRUE;
+   ctx->Extensions.EXT_provoking_vertex = GL_TRUE;
+   ctx->Extensions.EXT_stencil_two_side = GL_TRUE;
+   ctx->Extensions.EXT_texture_env_dot3 = GL_TRUE;
+   ctx->Extensions.ATI_fragment_shader = GL_TRUE;
+   ctx->Extensions.ATI_texture_env_combine3 = GL_TRUE;
+   ctx->Extensions.MESA_pack_invert = GL_TRUE;
+   ctx->Extensions.NV_fog_distance = GL_TRUE;
+   ctx->Extensions.NV_texture_env_combine4 = GL_TRUE;
+   ctx->Extensions.NV_texture_rectangle = GL_TRUE;
+   ctx->Extensions.OES_EGL_image = GL_TRUE;
+   ctx->Extensions.OES_EGL_image_external = GL_TRUE;
+   ctx->Extensions.OES_draw_texture = GL_TRUE;
 
-   ctx->Extensions.MESA_shader_integer_functions = true;
+   // Extensions that depend on higher GLSL versions
+   ctx->Extensions.ARB_gpu_shader5 = GL_TRUE;
+   ctx->Extensions.ARB_shader_precision = GL_TRUE;
+   ctx->Extensions.AMD_vertex_shader_layer = GL_TRUE;
+   ctx->Extensions.ARB_enhanced_layouts = GL_TRUE;
 
-   ctx->Extensions.NV_texture_rectangle = true;
+   // Extensions that either depend on GLSL 1.30 or are a subset thereof
+   ctx->Extensions.ARB_conservative_depth = GL_TRUE;
+   ctx->Extensions.ARB_shading_language_packing = GL_TRUE;
+   ctx->Extensions.OES_depth_texture_cube_map = GL_TRUE;
+   ctx->Extensions.ARB_shading_language_420pack = GL_TRUE;
+   ctx->Extensions.ARB_texture_query_levels = GL_TRUE;
+   ctx->Extensions.ARB_shader_bit_encoding = GL_TRUE;
+   ctx->Extensions.EXT_shader_integer_mix = GL_TRUE;
+   ctx->Extensions.ARB_arrays_of_arrays = GL_TRUE;
+   ctx->Extensions.MESA_shader_integer_functions = GL_TRUE;
 
-   ctx->Const.GLSLVersion = 120;
+   // Other extensions
+   ctx->Extensions.ARB_tessellation_shader = GL_TRUE;
+   ctx->Extensions.OES_geometry_shader = GL_TRUE;
+   ctx->Extensions.OES_sample_variables = GL_TRUE;
+   ctx->Extensions.ARB_gpu_shader_fp64 = GL_TRUE;
+   ctx->Extensions.ARB_vertex_attrib_64bit = GL_TRUE;
+   ctx->Extensions.ARB_gpu_shader_int64 = GL_TRUE;
+   ctx->Extensions.ARB_shader_storage_buffer_object = GL_TRUE;
+   ctx->Extensions.ARB_shader_image_load_store = GL_TRUE;
+   ctx->Extensions.ARB_shader_image_size = GL_TRUE;
 
-   /* 1.20 minimums. */
-   ctx->Const.MaxLights = 8;
-   ctx->Const.MaxClipPlanes = 6;
-   ctx->Const.MaxTextureUnits = 2;
-   ctx->Const.MaxTextureCoordUnits = 2;
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs = 16;
+   // Compute
+   ctx->Extensions.ARB_compute_shader = GL_TRUE;
+   ctx->Extensions.ARB_compute_variable_group_size = GL_TRUE;
 
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxUniformComponents = 512;
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxOutputComponents = 32;
-   ctx->Const.MaxVarying = 8; /* == gl_MaxVaryingFloats / 4 */
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits = 0;
-   ctx->Const.MaxCombinedTextureImageUnits = 2;
-   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits = 2;
-   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxUniformComponents = 64;
-   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxInputComponents = 32;
+   // ES compatibility (is this needed?)
+   ctx->Extensions.ARB_ES3_compatibility = GL_TRUE;
+   ctx->Extensions.ARB_ES3_1_compatibility = GL_TRUE;
+   ctx->Extensions.ARB_ES3_2_compatibility = GL_TRUE;
+   ctx->Extensions.OES_texture_cube_map_array = GL_TRUE;
+   ctx->Extensions.OES_viewport_array = GL_TRUE;
+   ctx->Extensions.OES_primitive_bounding_box = GL_TRUE;
 
-   ctx->Const.MaxDrawBuffers = 1;
-   ctx->Const.MaxComputeWorkGroupCount[0] = 65535;
-   ctx->Const.MaxComputeWorkGroupCount[1] = 65535;
-   ctx->Const.MaxComputeWorkGroupCount[2] = 65535;
-   ctx->Const.MaxComputeWorkGroupSize[0] = 1024;
-   ctx->Const.MaxComputeWorkGroupSize[1] = 1024;
-   ctx->Const.MaxComputeWorkGroupSize[2] = 64;
-   ctx->Const.MaxComputeWorkGroupInvocations = 1024;
-   ctx->Const.MaxComputeVariableGroupSize[0] = 512;
-   ctx->Const.MaxComputeVariableGroupSize[1] = 512;
-   ctx->Const.MaxComputeVariableGroupSize[2] = 64;
-   ctx->Const.MaxComputeVariableGroupInvocations = 512;
-   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits = 16;
-   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxUniformComponents = 1024;
-   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxInputComponents = 0; /* not used */
-   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxOutputComponents = 0; /* not used */
+   // Other extensions that were here originally
+   ctx->Extensions.ARB_draw_instanced = GL_TRUE;
+   ctx->Extensions.ARB_fragment_layer_viewport = GL_TRUE;
+   ctx->Extensions.ARB_sample_shading = GL_TRUE;
+   ctx->Extensions.ARB_shader_draw_parameters = GL_TRUE;
+   ctx->Extensions.ARB_shader_stencil_export = GL_TRUE;
+   ctx->Extensions.ARB_shader_texture_lod = GL_TRUE;
+   ctx->Extensions.ARB_texture_cube_map_array = GL_TRUE;
+   ctx->Extensions.ARB_texture_gather = GL_TRUE;
+   ctx->Extensions.ARB_texture_multisample = GL_TRUE;
+   ctx->Extensions.ARB_texture_query_lod = GL_TRUE;
+   ctx->Extensions.ARB_uniform_buffer_object = GL_TRUE;
+   ctx->Extensions.ARB_viewport_array = GL_TRUE;
+   ctx->Extensions.ARB_cull_distance = GL_TRUE;
+   ctx->Extensions.ARB_bindless_texture = GL_TRUE;
+   ctx->Extensions.OES_standard_derivatives = GL_TRUE;
+   ctx->Extensions.EXT_texture_array = GL_TRUE;
 
-   /* Set up default shader compiler options. */
-   // fincs-edit zone start
-   // See st_init_limits in st_extensions.c
-   struct gl_shader_compiler_options options;
-   memset(&options, 0, sizeof(options));
-   options.MaxUnrollIterations = 32;
-   options.MaxIfDepth = 16;
-   options.LowerBufferInterfaceBlocks = true;
-   options.LowerCombinedClipCullDistance = true;
-
-   for (int sh = 0; sh < MESA_SHADER_STAGES; ++sh)
-      memcpy(&ctx->Const.ShaderCompilerOptions[sh], &options, sizeof(options));
-
-   ctx->Const.ShaderCompilerOptions[MESA_SHADER_FRAGMENT].EmitNoIndirectOutput = true;
-   // fincs-edit zone end
+   // fincs-edit block end
 
    _mesa_locale_init();
 }

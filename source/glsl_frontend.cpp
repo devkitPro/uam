@@ -17,6 +17,7 @@
 #include "main/mtypes.h"
 #include "program/program.h"
 #include "state_tracker/st_glsl_to_tgsi.h"
+#include "tgsi/tgsi_from_mesa.h"
 
 extern "C"
 {
@@ -173,96 +174,153 @@ initialize_context(struct gl_context *ctx, gl_api api)
 {
 	initialize_context_to_defaults(ctx, api);
 
-	/* The standalone compiler needs to claim support for almost
-		* everything in order to compile the built-in functions.
-		*/
+	ctx->Const.MaxPatchVertices = MAX_PATCH_VERTICES;
+
+	// Adapted from st_init_extensions
 	ctx->Const.GLSLVersion = 450;
-	ctx->Extensions.ARB_ES3_compatibility = true;
-	ctx->Const.MaxComputeWorkGroupCount[0] = 65535;
+	ctx->Const.NativeIntegers = GL_TRUE;
+	ctx->Const.MaxClipPlanes = 8;
+	ctx->Const.UniformBooleanTrue = ~0U;
+	ctx->Const.MaxSamples = 8;
+	ctx->Const.MaxImageSamples = 8;
+	ctx->Const.MaxColorTextureSamples = 8;
+	ctx->Const.MaxDepthTextureSamples = 8;
+	ctx->Const.MaxIntegerSamples = 8;
+	ctx->Const.MaxFramebufferSamples = 8;
+	ctx->Const.MaxColorFramebufferSamples = 8;
+	ctx->Const.MaxColorFramebufferStorageSamples = 8;
+	ctx->Const.MaxDepthStencilFramebufferSamples = 8;
+	ctx->Const.MinMapBufferAlignment = 64;
+	ctx->Const.MaxTextureBufferSize = 128 * 1024 * 1024;
+	ctx->Const.TextureBufferOffsetAlignment = 16;
+	ctx->Const.MaxViewports = 16;
+	ctx->Const.ViewportBounds.Min = -32768.0;
+	ctx->Const.ViewportBounds.Max = 32767.0;
+	ctx->Const.MaxComputeWorkGroupInvocations = 1024;
+	ctx->Const.MaxComputeSharedMemorySize = 96 << 10;
+	ctx->Const.MaxComputeWorkGroupCount[0] = 0x7fffffff;
 	ctx->Const.MaxComputeWorkGroupCount[1] = 65535;
 	ctx->Const.MaxComputeWorkGroupCount[2] = 65535;
 	ctx->Const.MaxComputeWorkGroupSize[0] = 1024;
 	ctx->Const.MaxComputeWorkGroupSize[1] = 1024;
 	ctx->Const.MaxComputeWorkGroupSize[2] = 64;
-	ctx->Const.MaxComputeWorkGroupInvocations = 1024;
-	ctx->Const.MaxComputeSharedMemorySize = 32768;
-	ctx->Const.MaxComputeVariableGroupSize[0] = 512;
-	ctx->Const.MaxComputeVariableGroupSize[1] = 512;
+	ctx->Const.MaxComputeVariableGroupSize[0] = 1024;
+	ctx->Const.MaxComputeVariableGroupSize[1] = 1024;
 	ctx->Const.MaxComputeVariableGroupSize[2] = 64;
-	ctx->Const.MaxComputeVariableGroupInvocations = 512;
-	ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits = 16;
-	ctx->Const.Program[MESA_SHADER_COMPUTE].MaxUniformComponents = 1024;
-	ctx->Const.Program[MESA_SHADER_COMPUTE].MaxCombinedUniformComponents = 1024;
-	ctx->Const.Program[MESA_SHADER_COMPUTE].MaxInputComponents = 0; /* not used */
-	ctx->Const.Program[MESA_SHADER_COMPUTE].MaxOutputComponents = 0; /* not used */
-	ctx->Const.Program[MESA_SHADER_COMPUTE].MaxAtomicBuffers = 8;
-	ctx->Const.Program[MESA_SHADER_COMPUTE].MaxAtomicCounters = 8;
-	ctx->Const.Program[MESA_SHADER_COMPUTE].MaxImageUniforms = 8;
-	ctx->Const.Program[MESA_SHADER_COMPUTE].MaxUniformBlocks = 12;
+	ctx->Const.MaxComputeVariableGroupInvocations = 1024;
+	ctx->Const.NoPrimitiveBoundingBoxOutput = true;
 
-	ctx->Const.MaxClipPlanes = 8;
-	ctx->Const.MaxDrawBuffers = 8;
-	ctx->Const.MinProgramTexelOffset = -8;
-	ctx->Const.MaxProgramTexelOffset = 7;
-	ctx->Const.MaxLights = 8;
-	ctx->Const.MaxTextureCoordUnits = 8;
-	ctx->Const.MaxTextureUnits = 2;
-	ctx->Const.MaxUniformBufferBindings = 16;
-	ctx->Const.MaxVertexStreams = 4;
-	ctx->Const.MaxTransformFeedbackBuffers = 4;
+	// Adapted from st_init_limits
+	ctx->Const.MaxTextureLevels = 15;
+	ctx->Const.Max3DTextureLevels = 12;
+	ctx->Const.MaxCubeTextureLevels = 15;
+	ctx->Const.MaxTextureRectSize = 16384;
+	ctx->Const.MaxArrayTextureLayers = 2048;
+	ctx->Const.MaxViewportWidth =
+	ctx->Const.MaxViewportHeight =
+	ctx->Const.MaxRenderbufferSize = ctx->Const.MaxTextureRectSize;
+	ctx->Const.SubPixelBits = 8;
+	ctx->Const.ViewportSubpixelBits = 8;
+	ctx->Const.MaxDrawBuffers = ctx->Const.MaxColorAttachments = 8;
+	ctx->Const.MaxDualSourceDrawBuffers = 1;
+	ctx->Const.MaxLineWidth = 10.0f;
+	ctx->Const.MaxLineWidthAA = 10.0f;
+	ctx->Const.MaxPointSize = 63.0f;
+	ctx->Const.MaxPointSizeAA = 63.375f;
+	ctx->Const.MinPointSize = 1.0f;
+	ctx->Const.MinPointSizeAA = 0.0f;
+	ctx->Const.MaxTextureMaxAnisotropy = 16.0f;
+	ctx->Const.MaxTextureLodBias = 15.0f;
+	ctx->Const.QuadsFollowProvokingVertexConvention = GL_TRUE;
+	ctx->Const.MaxUniformBlockSize = 65536;
+	for (unsigned sh = 0; sh < PIPE_SHADER_TYPES; ++sh)
+	{
+		gl_program_constants *pc = &ctx->Const.Program[sh];
+		gl_shader_compiler_options *options = &ctx->Const.ShaderCompilerOptions[tgsi_processor_to_shader_stage(sh)];
+		pc->MaxTextureImageUnits = 32;
+		pc->MaxInstructions = pc->MaxNativeInstructions = 16384;
+		pc->MaxAluInstructions = pc->MaxNativeAluInstructions = 16384;
+		pc->MaxTexInstructions = pc->MaxNativeTexInstructions = 16384;
+		pc->MaxTexIndirections = pc->MaxNativeTexIndirections = 16384;
+		pc->MaxAttribs = pc->MaxNativeAttribs = sh == PIPE_SHADER_VERTEX ? 16 : (sh == PIPE_SHADER_FRAGMENT ? (0x1f0 / 16) : (0x200 / 16));
+		pc->MaxTemps = pc->MaxNativeTemps = 128;
+		pc->MaxAddressRegs = pc->MaxNativeAddressRegs = sh == PIPE_SHADER_VERTEX ? 1 : 0;
+		pc->MaxUniformComponents = 65536/4;
+		pc->MaxParameters = pc->MaxNativeParameters = pc->MaxUniformComponents / 4;
+		pc->MaxInputComponents = pc->MaxAttribs*4;
+		pc->MaxOutputComponents = 32*4;
+		pc->MaxUniformBlocks = sh != PIPE_SHADER_COMPUTE ? 14 : 6; // fincs-note: this is custom - also this doesn't count driver ubos or blockless uniforms
+		pc->MaxCombinedUniformComponents = pc->MaxUniformComponents + uint64_t(ctx->Const.MaxUniformBlockSize) / 4 * pc->MaxUniformBlocks;
+		pc->MaxShaderStorageBlocks = 16; // fincs-note: this is also custom
+		pc->MaxAtomicCounters = 0; // fincs-note: we don't support atomic counters
+		pc->MaxAtomicBuffers = 0; // same here
+		pc->MaxImageUniforms = 8;
+		pc->MaxLocalParams = 4096;
+		pc->MaxEnvParams = 4096;
+		pc->LowInt.RangeMin = 31;
+		pc->LowInt.RangeMax = 30;
+		pc->LowInt.Precision = 0;
+		pc->MediumInt = pc->HighInt = pc->LowInt;
+		options->MaxIfDepth = 16;
+		options->EmitNoIndirectOutput = sh == PIPE_SHADER_FRAGMENT ? GL_TRUE : GL_FALSE;
+		options->MaxUnrollIterations = 16384;
+		options->LowerCombinedClipCullDistance = GL_TRUE;
+		options->LowerBufferInterfaceBlocks = GL_TRUE;
+	}
 
-	ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs = 16;
-	ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits = 16;
-	ctx->Const.Program[MESA_SHADER_VERTEX].MaxUniformComponents = 1024;
-	ctx->Const.Program[MESA_SHADER_VERTEX].MaxCombinedUniformComponents = 1024;
-	ctx->Const.Program[MESA_SHADER_VERTEX].MaxInputComponents = 0; /* not used */
-	ctx->Const.Program[MESA_SHADER_VERTEX].MaxOutputComponents = 64;
+	ctx->Const.MaxUserAssignableUniformLocations =
+		ctx->Const.Program[MESA_SHADER_VERTEX].MaxUniformComponents +
+		ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxUniformComponents +
+		ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxUniformComponents +
+		ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxUniformComponents +
+		ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxUniformComponents;
 
-	ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits = 16;
-	ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxUniformComponents = 1024;
-	ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxCombinedUniformComponents = 1024;
-	ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxInputComponents =
-		ctx->Const.Program[MESA_SHADER_VERTEX].MaxOutputComponents;
-	ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxOutputComponents = 128;
-
-	ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits = 16;
-	ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxUniformComponents = 1024;
-	ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxCombinedUniformComponents = 1024;
-	ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxInputComponents =
-		ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxOutputComponents;
-	ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxOutputComponents = 0; /* not used */
+	ctx->Const.LowerTessLevel = GL_TRUE;
+	ctx->Const.LowerCsDerivedVariables = GL_TRUE;
+	ctx->Const.PrimitiveRestartForPatches = GL_TRUE;
 
 	ctx->Const.MaxCombinedTextureImageUnits =
-		ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits
-		+ ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits
-		+ ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits;
+		ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits; // fincs-note: this is custom (only 1)
 
-	ctx->Const.MaxGeometryOutputVertices = 256;
+	ctx->Const.MaxVarying = ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxAttribs;
+	ctx->Const.MaxGeometryOutputVertices = 1024;
 	ctx->Const.MaxGeometryTotalOutputComponents = 1024;
-
-	ctx->Const.MaxVarying = 60 / 4;
-
-	ctx->Const.GenerateTemporaryNames = true;
-	ctx->Const.MaxPatchVertices = 32;
-
-	/* GL_ARB_explicit_uniform_location, GL_MAX_UNIFORM_LOCATIONS */
-	ctx->Const.MaxUserAssignableUniformLocations =
-		4 * MESA_SHADER_STAGES * MAX_UNIFORMS;
-
-	// Actually fill out info
-	ctx->Const.NativeIntegers = GL_TRUE;
-	ctx->Const.MaxCombinedUniformBlocks = 16;
-	ctx->Const.MaxUniformBlockSize = 0x10000;
-	ctx->Const.MaxCombinedShaderStorageBlocks = 16;
-	ctx->Const.MaxShaderStorageBufferBindings = 16;
-	ctx->Const.MaxShaderStorageBlockSize = 0x10000;
-	for (int stage = 0; stage < MESA_SHADER_STAGES; stage ++)
-	{
-		ctx->Const.Program[stage].MaxUniformComponents = 0x10000 / 4;
-		ctx->Const.Program[stage].MaxCombinedUniformComponents = (0x10000*16) / 4;
-		ctx->Const.Program[stage].MaxUniformBlocks = 16;
-		ctx->Const.Program[stage].MaxShaderStorageBlocks = 16;
-	}
+	ctx->Const.MaxGeometryShaderInvocations = 32;
+	ctx->Const.MaxTessPatchComponents = 30*4;
+	ctx->Const.MinProgramTexelOffset = -8;
+	ctx->Const.MaxProgramTexelOffset = 7;
+	ctx->Const.MaxProgramTextureGatherComponents = 4;
+	ctx->Const.MinProgramTextureGatherOffset = -32;
+	ctx->Const.MaxProgramTextureGatherOffset = 31;
+	ctx->Const.MaxTransformFeedbackBuffers = 4;
+	ctx->Const.MaxTransformFeedbackSeparateComponents = 128;
+	ctx->Const.MaxTransformFeedbackInterleavedComponents = 128;
+	ctx->Const.MaxVertexStreams = 4;
+	ctx->Const.MaxVertexAttribStride = 2048;
+	ctx->Const.UniformBufferOffsetAlignment = 256;
+	ctx->Const.MaxCombinedUniformBlocks = ctx->Const.MaxUniformBufferBindings =
+		ctx->Const.Program[MESA_SHADER_VERTEX].MaxUniformBlocks; // fincs-note: this is custom (only 1)
+	ctx->Const.GLSLFrontFacingIsSysVal = GL_TRUE;
+	ctx->Const.MaxCombinedShaderOutputResources = ctx->Const.MaxDrawBuffers;
+	ctx->Const.ShaderStorageBufferOffsetAlignment = 16;
+	ctx->Const.MaxCombinedShaderStorageBlocks = ctx->Const.MaxShaderStorageBufferBindings =
+		ctx->Const.Program[MESA_SHADER_VERTEX].MaxShaderStorageBlocks; // fincs-note: this is custom (only 1)
+	ctx->Const.MaxCombinedShaderOutputResources += ctx->Const.MaxCombinedShaderStorageBlocks;
+	ctx->Const.MaxShaderStorageBlockSize = 1 << 27;
+	ctx->Const.MaxCombinedImageUniforms =
+		ctx->Const.Program[MESA_SHADER_VERTEX].MaxImageUniforms; // fincs-note: this is custom (only 1)
+	ctx->Const.MaxCombinedShaderOutputResources += ctx->Const.MaxCombinedImageUniforms;
+	ctx->Const.MaxImageUnits = ctx->Const.Program[MESA_SHADER_VERTEX].MaxImageUniforms; // fincs-note: this is also custom
+	ctx->Const.MaxFramebufferWidth = ctx->Const.MaxViewportWidth;
+	ctx->Const.MaxFramebufferHeight = ctx->Const.MaxViewportHeight;
+	ctx->Const.MaxFramebufferLayers = 2048;
+	ctx->Const.MaxWindowRectangles = 8;
+	ctx->Const.AllowMappedBuffersDuringExecution = GL_TRUE;
+	ctx->Const.MaxSubpixelPrecisionBiasBits = 8;
+	ctx->Const.ConservativeRasterDilateRange[0] = 0.0f;
+	ctx->Const.ConservativeRasterDilateRange[1] = 0.75f;
+	ctx->Const.ConservativeRasterDilateGranularity = 0.25f;
+	// end
 
 	ctx->Driver.NewProgram = new_program;
 }
