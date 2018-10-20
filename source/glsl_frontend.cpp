@@ -253,9 +253,16 @@ initialize_context(struct gl_context *ctx, gl_api api)
 	ctx->Const.NativeIntegers = GL_TRUE;
 	ctx->Const.MaxCombinedUniformBlocks = 16;
 	ctx->Const.MaxUniformBlockSize = 0x10000;
-	ctx->Const.Program[MESA_SHADER_VERTEX].MaxUniformComponents = 0x10000 / 4;
-	ctx->Const.Program[MESA_SHADER_VERTEX].MaxCombinedUniformComponents = (0x10000*16) / 4;
-	ctx->Const.Program[MESA_SHADER_VERTEX].MaxUniformBlocks = 16;
+	ctx->Const.MaxCombinedShaderStorageBlocks = 16;
+	ctx->Const.MaxShaderStorageBufferBindings = 16;
+	ctx->Const.MaxShaderStorageBlockSize = 0x10000;
+	for (int stage = 0; stage < MESA_SHADER_STAGES; stage ++)
+	{
+		ctx->Const.Program[stage].MaxUniformComponents = 0x10000 / 4;
+		ctx->Const.Program[stage].MaxCombinedUniformComponents = (0x10000*16) / 4;
+		ctx->Const.Program[stage].MaxUniformBlocks = 16;
+		ctx->Const.Program[stage].MaxShaderStorageBlocks = 16;
+	}
 
 	ctx->Driver.NewProgram = new_program;
 }
