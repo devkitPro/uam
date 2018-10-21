@@ -352,6 +352,7 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 	assert(prg->data != NULL);
 	prg->data->InfoLog = ralloc_strdup(prg->data, "");
 	prg->SeparateShader = true;
+	exec_list_make_empty(&prg->EmptyUniformLocations);
 
 	/* Created just to avoid segmentation faults */
 	prg->AttributeBindings = new string_to_uint_map;
