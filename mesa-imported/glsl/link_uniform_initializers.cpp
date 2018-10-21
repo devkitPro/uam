@@ -280,6 +280,16 @@ link_set_uniform_initializers(struct gl_shader_program *prog,
          if (!mem_ctx)
             mem_ctx = ralloc_context(NULL);
 
+         if (!var->data.explicit_binding) { // fincs-edit: added this entire section
+            const glsl_type *const type = var->type->without_array();
+            const bool is_sampler = type->is_sampler();
+            const bool is_image = type->is_image();
+            if ((is_sampler || is_image) && !var->contains_bindless())
+               linker_error(prog, "explicit binding required for %s uniform `%s'\n",
+                  is_sampler ? "sampler" : "image",
+                  var->name);
+         }
+
          if (var->data.explicit_binding) {
             const glsl_type *const type = var->type;
 
