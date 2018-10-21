@@ -18,6 +18,7 @@
 #include "program/program.h"
 #include "state_tracker/st_glsl_to_tgsi.h"
 #include "tgsi/tgsi_from_mesa.h"
+#include "glsl/ir_uniform.h"
 
 extern "C"
 {
@@ -455,7 +456,31 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 			fprintf(stderr, "Translation failed\n");
 			goto _fail;
 		}
+
+		gl_program_parameter_list *pl = linked_shader->Program->Parameters;
+		fprintf(stderr, "Const buffer size: 0x%x\n", 4*pl->NumParameterValues);
+		unsigned last_location = ~0U;
+		for (unsigned i = 0; i < pl->NumParameters; i ++)
+		{
+			gl_program_parameter *p = &pl->Parameters[i];
+			unsigned location = 0;
+			prg->UniformHash->get(location, p->Name);
+			gl_uniform_storage *storage = &prg->data->UniformStorage[location];
+			if (storage->builtin || storage->hidden)
+				continue;
+			if (location != last_location)
+			{
+				last_location = location;
+				fprintf(stderr, "Uniform %s (type=%d dim=%ux%u size=%u) at 0x%x\n",
+					p->Name,
+					storage->type->base_type,
+					storage->type->matrix_columns, storage->type->vector_elements,
+					storage->array_elements,
+					4*pl->ParameterValueOffset[i]);
+			}
+		}
 	}
+
 	return prg;
 
 _fail:
