@@ -293,15 +293,21 @@ link_set_uniform_initializers(struct gl_shader_program *prog,
          if (var->data.explicit_binding) {
             const glsl_type *const type = var->type;
 
-            if (type->without_array()->is_sampler() ||
+            /* fincs-edit: check is_in_buffer_block first. Otherwise, samplers
+             * inside buffer blocks will call into set_opaque_binding, which will
+             * then perform a null pointer deref into storage->storage (which is
+             * NULL for fields inside UBOs since they don't get assigned storage
+             * by the driver).
+             */
+            if (var->is_in_buffer_block()) {
+               /* This case is handled by link_uniform_blocks (at
+                * process_block_array_leaf)
+                */
+            } else if (type->without_array()->is_sampler() ||
                 type->without_array()->is_image()) {
                int binding = var->data.binding;
                linker::set_opaque_binding(mem_ctx, prog, var, var->type,
                                           var->name, &binding);
-            } else if (var->is_in_buffer_block()) {
-               /* This case is handled by link_uniform_blocks (at
-                * process_block_array_leaf)
-                */
             } else if (type->contains_atomic()) {
                /* we don't actually need to do anything. */
             } else {
