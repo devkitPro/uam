@@ -122,6 +122,7 @@ init_gl_program(struct gl_program *prog, GLenum target, bool is_arb_asm)
 	prog->RefCount = 1;
 	prog->Target = target;
 	prog->Format = GL_PROGRAM_FORMAT_ASCII_ARB;
+	prog->info.stage = (gl_shader_stage)_mesa_program_enum_to_shader_stage(target);
 	prog->is_arb_asm = is_arb_asm;
 }
 
