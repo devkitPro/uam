@@ -31,6 +31,20 @@ _glsl_program_get_tgsi_visitor(struct gl_program *prog);
 void
 _glsl_program_attach_tgsi_tokens(struct gl_program *prog, const tgsi_token *tokens, unsigned int num);
 
+static bool tgsi_attach_to_program(struct gl_program *prog, struct ureg_program *ureg, enum pipe_error error)
+{
+	bool rc = error == PIPE_OK;
+	if (rc)
+	{
+		// Retrieve the tgsi
+		unsigned int num_tokens = 0;
+		const struct tgsi_token *tokens = ureg_get_tokens(ureg, &num_tokens);
+		_glsl_program_attach_tgsi_tokens(prog, tokens, num_tokens);
+	}
+	ureg_destroy(ureg);
+	return rc;
+}
+
 // Based off st_translate_vertex_program
 bool tgsi_translate_vertex(struct gl_context *ctx, struct gl_program *prog)
 {
@@ -106,21 +120,156 @@ bool tgsi_translate_vertex(struct gl_context *ctx, struct gl_program *prog)
 		num_inputs, input_to_index, NULL, NULL, NULL, NULL,
 		num_outputs, result_to_output, output_semantic_name, output_semantic_index);
 
-	if (error != PIPE_OK)
-	{
-		ureg_destroy(ureg);
-		return false;
+	return tgsi_attach_to_program(prog, ureg, error);
+}
+
+// Based off st_translate_program_common
+static bool tgsi_translate_generic(struct gl_context *ctx, struct gl_program *prog, struct ureg_program *ureg, enum pipe_shader_type stage)
+{
+	ubyte inputSlotToAttr[VARYING_SLOT_TESS_MAX];
+	ubyte inputMapping[VARYING_SLOT_TESS_MAX];
+	ubyte outputMapping[VARYING_SLOT_TESS_MAX];
+	GLuint attr;
+
+	ubyte input_semantic_name[PIPE_MAX_SHADER_INPUTS];
+	ubyte input_semantic_index[PIPE_MAX_SHADER_INPUTS];
+	uint num_inputs = 0;
+
+	ubyte output_semantic_name[PIPE_MAX_SHADER_OUTPUTS];
+	ubyte output_semantic_index[PIPE_MAX_SHADER_OUTPUTS];
+	uint num_outputs = 0;
+
+	GLint i;
+
+	memset(inputSlotToAttr, 0, sizeof(inputSlotToAttr));
+	memset(inputMapping, 0, sizeof(inputMapping));
+	memset(outputMapping, 0, sizeof(outputMapping));
+
+	if (prog->info.clip_distance_array_size)
+		ureg_property(ureg, TGSI_PROPERTY_NUM_CLIPDIST_ENABLED,
+						prog->info.clip_distance_array_size);
+	if (prog->info.cull_distance_array_size)
+		ureg_property(ureg, TGSI_PROPERTY_NUM_CULLDIST_ENABLED,
+						prog->info.cull_distance_array_size);
+
+	/*
+	 * Convert Mesa program inputs to TGSI input register semantics.
+	 */
+	for (attr = 0; attr < VARYING_SLOT_MAX; attr++) {
+		if ((prog->info.inputs_read & BITFIELD64_BIT(attr)) == 0)
+			continue;
+
+		unsigned slot = num_inputs++;
+
+		inputMapping[attr] = slot;
+		inputSlotToAttr[slot] = attr;
+
+		unsigned semantic_name, semantic_index;
+		tgsi_get_gl_varying_semantic(gl_varying_slot(attr), true, &semantic_name, &semantic_index);
+		input_semantic_name[slot] = semantic_name;
+		input_semantic_index[slot] = semantic_index;
 	}
 
-	// We get back the tgsi!!
-	unsigned int num_tokens = 0;
-	const struct tgsi_token *tokens = ureg_get_tokens(ureg, &num_tokens);
-	ureg_destroy(ureg);
+	/* Also add patch inputs. */
+	for (attr = 0; attr < 32; attr++) {
+		if (prog->info.patch_inputs_read & (1u << attr)) {
+			GLuint slot = num_inputs++;
+			GLuint patch_attr = VARYING_SLOT_PATCH0 + attr;
 
-	//tgsi_dump_to_file(tokens, TGSI_DUMP_FLOAT_AS_HEX, stdout);
-	_glsl_program_attach_tgsi_tokens(prog, tokens, num_tokens);
+			inputMapping[patch_attr] = slot;
+			inputSlotToAttr[slot] = patch_attr;
+			input_semantic_name[slot] = TGSI_SEMANTIC_PATCH;
+			input_semantic_index[slot] = attr;
+		}
+	}
 
-	return true;
+	/* initialize output semantics to defaults */
+	for (i = 0; i < PIPE_MAX_SHADER_OUTPUTS; i++) {
+		output_semantic_name[i] = TGSI_SEMANTIC_GENERIC;
+		output_semantic_index[i] = 0;
+	}
+
+	/*
+	 * Determine number of outputs, the (default) output register
+	 * mapping and the semantic information for each output.
+	 */
+	for (attr = 0; attr < VARYING_SLOT_MAX; attr++) {
+		if (prog->info.outputs_written & BITFIELD64_BIT(attr)) {
+			GLuint slot = num_outputs++;
+
+			outputMapping[attr] = slot;
+
+			unsigned semantic_name, semantic_index;
+			tgsi_get_gl_varying_semantic(gl_varying_slot(attr), true, &semantic_name, &semantic_index);
+			output_semantic_name[slot] = semantic_name;
+			output_semantic_index[slot] = semantic_index;
+		}
+	}
+
+	/* Also add patch outputs. */
+	for (attr = 0; attr < 32; attr++) {
+		if (prog->info.patch_outputs_written & (1u << attr)) {
+			GLuint slot = num_outputs++;
+			GLuint patch_attr = VARYING_SLOT_PATCH0 + attr;
+
+			outputMapping[patch_attr] = slot;
+			output_semantic_name[slot] = TGSI_SEMANTIC_PATCH;
+			output_semantic_index[slot] = attr;
+		}
+	}
+
+	enum pipe_error error = st_translate_program(ctx,
+		stage,
+		ureg,
+		_glsl_program_get_tgsi_visitor(prog),
+		prog,
+		num_inputs, inputMapping, inputSlotToAttr, input_semantic_name, input_semantic_index, NULL,
+		num_outputs, outputMapping, output_semantic_name, output_semantic_index);
+
+	return tgsi_attach_to_program(prog, ureg, error);
+}
+
+// Based off st_translate_tessctrl_program
+bool tgsi_translate_tessctrl(struct gl_context *ctx, struct gl_program *prog)
+{
+	struct ureg_program *ureg = ureg_create(PIPE_SHADER_TESS_CTRL);
+	if (!ureg)
+		return false;
+
+	ureg_property(ureg, TGSI_PROPERTY_TCS_VERTICES_OUT, prog->info.tess.tcs_vertices_out);
+
+	return tgsi_translate_generic(ctx, prog, ureg, PIPE_SHADER_TESS_CTRL);
+}
+
+// Based off st_translate_tesseval_program
+bool tgsi_translate_tesseval(struct gl_context *ctx, struct gl_program *prog)
+{
+	struct ureg_program *ureg = ureg_create(PIPE_SHADER_TESS_EVAL);
+	if (!ureg)
+		return false;
+
+	uint32_t prim_mode = prog->info.tess.primitive_mode;
+	ureg_property(ureg, TGSI_PROPERTY_TES_PRIM_MODE, prim_mode == GL_ISOLINES ? GL_LINES : prim_mode);
+	ureg_property(ureg, TGSI_PROPERTY_TES_SPACING, (prog->info.tess.spacing + 1) % 3);
+	ureg_property(ureg, TGSI_PROPERTY_TES_VERTEX_ORDER_CW, !prog->info.tess.ccw);
+	ureg_property(ureg, TGSI_PROPERTY_TES_POINT_MODE, prog->info.tess.point_mode);
+
+	return tgsi_translate_generic(ctx, prog, ureg, PIPE_SHADER_TESS_EVAL);
+}
+
+// Based off st_translate_geometry_program
+bool tgsi_translate_geometry(struct gl_context *ctx, struct gl_program *prog)
+{
+	struct ureg_program *ureg = ureg_create(PIPE_SHADER_GEOMETRY);
+	if (!ureg)
+		return false;
+
+	ureg_property(ureg, TGSI_PROPERTY_GS_INPUT_PRIM, prog->info.gs.input_primitive);
+	ureg_property(ureg, TGSI_PROPERTY_GS_OUTPUT_PRIM, prog->info.gs.output_primitive);
+	ureg_property(ureg, TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES, prog->info.gs.vertices_out);
+	ureg_property(ureg, TGSI_PROPERTY_GS_INVOCATIONS, prog->info.gs.invocations);
+
+	return tgsi_translate_generic(ctx, prog, ureg, PIPE_SHADER_GEOMETRY);
 }
 
 // Based off st_translate_vertex_program
@@ -373,18 +522,15 @@ bool tgsi_translate_fragment(struct gl_context *ctx, struct gl_program *prog)
 		fs_num_inputs, inputMapping, inputSlotToAttr, input_semantic_name, input_semantic_index, interpMode,
 		fs_num_outputs, outputMapping, fs_output_semantic_name, fs_output_semantic_index);
 
-	if (error != PIPE_OK)
-	{
-		ureg_destroy(ureg);
+	return tgsi_attach_to_program(prog, ureg, error);
+}
+
+// Based off st_translate_compute_program
+bool tgsi_translate_compute(struct gl_context *ctx, struct gl_program *prog)
+{
+	struct ureg_program *ureg = ureg_create(PIPE_SHADER_COMPUTE);
+	if (!ureg)
 		return false;
-	}
 
-	// We get back the tgsi!!
-	unsigned int num_tokens = 0;
-	const struct tgsi_token *tokens = ureg_get_tokens(ureg, &num_tokens);
-	ureg_destroy(ureg);
-
-	_glsl_program_attach_tgsi_tokens(prog, tokens, num_tokens);
-
-	return true;
+	return tgsi_translate_generic(ctx, prog, ureg, PIPE_SHADER_COMPUTE);
 }
