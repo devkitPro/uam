@@ -308,19 +308,26 @@ int main(int argc, char* argv[])
 
 	info.optLevel = 3;
 
-	//info.bin.smemSize = prog->cp.smem_size;
-	//info.io.genUserClip = prog->vp.num_ucps;
-	info.io.auxCBSlot = 15;
-	info.io.msInfoCBSlot = 15;
-	info.io.ucpBase = 0x120; //NVC0_CB_AUX_UCP_INFO;
-	info.io.drawInfoBase = 0x1a0; //NVC0_CB_AUX_DRAW_INFO;
-	info.io.msInfoBase = 0x0c0; //NVC0_CB_AUX_MS_INFO;
-	info.io.bufInfoBase = 0x2a0; //NVC0_CB_AUX_BUF_INFO(0);
-	info.io.suInfoBase = 0x4a0; //NVC0_CB_AUX_SU_INFO(0);
-	info.io.texBindBase = 0x020; //NVC0_CB_AUX_TEX_INFO(0);
-	info.io.fbtexBindBase = 0x100; //NVC0_CB_AUX_FB_TEX_INFO;
-	info.io.bindlessBase = 0x6b0; //NVC0_CB_AUX_BINDLESS_INFO(0);
-	info.io.sampleInfoBase = 0x1a0; //NVC0_CB_AUX_SAMPLE_INFO;
+	//info.bin.smemSize    = prog->cp.smem_size; // This is really an output var, not an input var. Not sure why nouveau initializes it.
+	//info.io.genUserClip  = prog->vp.num_ucps;  // This is used for old-style clip plane handling (gl_ClipVertex). (we don't need this)
+	info.io.auxCBSlot      = 15;
+	info.io.msInfoCBSlot   = 15;
+	info.io.ucpBase        = 0x120; //NVC0_CB_AUX_UCP_INFO;         // This is also for old-style clip plane handling. (we don't need this)
+	info.io.drawInfoBase   = 0x1a0; //NVC0_CB_AUX_DRAW_INFO;        // This is used for gl_BaseVertex, gl_BaseInstance and gl_DrawID (in that order)
+	info.io.msInfoBase     = 0x0c0; //NVC0_CB_AUX_MS_INFO;          // This is used to load dx/dy in NVC0LoweringPass::adjustCoordinatesMS. TODO: figure out what it is for
+	info.io.bufInfoBase    = 0x2a0; //NVC0_CB_AUX_BUF_INFO(0);      // This is used to load SSBO information (u64 iova / u32 size / u32 padding)
+	info.io.suInfoBase     = 0x4a0; //NVC0_CB_AUX_SU_INFO(0);       // Surface information. Unknown why nouveau needs it and NVN doesn't.
+	info.io.texBindBase    = 0x020; //NVC0_CB_AUX_TEX_INFO(0);      // Start of bound texture handles (32) + images (right after). 32-bit instead of 64-bit.
+	info.io.fbtexBindBase  = 0x100; //NVC0_CB_AUX_FB_TEX_INFO;      // This is used for implementing TGSI_OPCODE_FBFETCH, itself used for KHR/NV_blend_equation_advanced and EXT_shader_framebuffer_fetch.
+	info.io.bindlessBase   = 0x6b0; //NVC0_CB_AUX_BINDLESS_INFO(0); // Like suInfoBase, but for bindless textures. Unknown why this is a thing.
+	info.io.sampleInfoBase = 0x1a0; //NVC0_CB_AUX_SAMPLE_INFO;      // This is a LUT needed to implement gl_SamplePosition, it contains MSAA base sample positions.
+	if (stage == pipeline_stage_compute)
+	{
+		info.io.auxCBSlot = 7;
+		info.io.msInfoCBSlot = 7;
+		info.io.uboInfoBase = 0x120;       //NVC0_CB_AUX_UBO_INFO(0);  // This is like bufInfoBase, but for UBOs. Compute shaders need this because there aren't enough hardware constbufs. (we of course do not support the GL limit so this is useless)
+		info.prop.cp.gridInfoBase = 0x100; //NVC0_CB_AUX_GRID_INFO(0); // This is the work_dim parameter from clEnqueueNDRangeKernel (OpenCL). (we don't need this)
+	}
 
 	info.assignSlots = nvc0_program_assign_varying_slots;
 
