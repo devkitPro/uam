@@ -320,11 +320,11 @@ GM107LoweringPass::handleSUQ(TexInstruction *suq)
 
       if (mask & 0x1)
          bld.mkOp2(OP_SHR, TYPE_U32, suq->getDef(0), suq->getDef(0),
-                   loadMsAdjInfo32(suq->tex.target, 0, slot, ind, suq->tex.bindless));
+                   loadMsAdjInfo32(suq->tex.target, 0, slot, handle, true)); // fincs-edit: use bindless handle directly instead of driver UBO
       if (mask & 0x2) {
          int d = util_bitcount(mask & 0x1);
          bld.mkOp2(OP_SHR, TYPE_U32, suq->getDef(d), suq->getDef(d),
-                   loadMsAdjInfo32(suq->tex.target, 1, slot, ind, suq->tex.bindless));
+                   loadMsAdjInfo32(suq->tex.target, 1, slot, handle, true)); // fincs-edit: use bindless handle directly instead of driver UBO
       }
    }
 

@@ -1856,8 +1856,18 @@ NVC0LoweringPass::adjustCoordinatesMS(TexInstruction *tex)
    Value *tx = bld.getSSA(), *ty = bld.getSSA(), *ts = bld.getSSA();
    Value *ind = tex->getIndirectR();
 
-   Value *ms_x = loadMsAdjInfo32(tex->tex.target, 0, slot, ind, tex->tex.bindless);
-   Value *ms_y = loadMsAdjInfo32(tex->tex.target, 1, slot, ind, tex->tex.bindless);
+   // fincs-edit block start
+   Value *handle = ind;
+   bool load_bindless = tex->tex.bindless;
+   if (targ->getChipset() >= NVISA_GM107_CHIPSET) {
+      // Prefer bindless access as opposed to loading information from driver UBO
+      handle = loadTexHandle(ind, slot + 32);
+      load_bindless = true;
+   }
+
+   Value *ms_x = loadMsAdjInfo32(tex->tex.target, 0, slot, handle, load_bindless);
+   Value *ms_y = loadMsAdjInfo32(tex->tex.target, 1, slot, handle, load_bindless);
+   // fincs-edit block end
 
    bld.mkOp2(OP_SHL, TYPE_U32, tx, x, ms_x);
    bld.mkOp2(OP_SHL, TYPE_U32, ty, y, ms_y);
@@ -2404,6 +2414,7 @@ NVC0LoweringPass::processSurfaceCoordsGM107(TexInstruction *su)
       handle = loadTexHandle(ind, slot + 32);
    su->setSrc(arg + pos, handle);
 
+#if 0 // fincs-edit: Removing access checks for bound textures too.
    // The address check doesn't make sense here. The format check could make
    // sense but it's a bit of a pain.
    if (su->tex.bindless)
@@ -2427,6 +2438,7 @@ NVC0LoweringPass::processSurfaceCoordsGM107(TexInstruction *su)
                 pred->getDef(0));
    }
    su->setPredicate(CC_NOT_P, pred->getDef(0));
+#endif
 }
 
 void
