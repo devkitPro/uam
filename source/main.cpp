@@ -182,7 +182,8 @@ static int usage(const char* prog)
 	fprintf(stderr,
 		"Usage: %s [options] file\n"
 		"Options:\n"
-		"  -o, --out=<file>   Specifies the name of the output file to generate\n"
+		"  -o, --out=<file>   Specifies the output file to generate\n"
+		"  -t, --tgsi=<file>  Specifies the file to which output intermediary TGSI code\n"
 		"  -s, --stage=<name> Specifies the pipeline stage of the shader\n"
 		"                     (vert, tess_ctrl, tess_eval, geom, frag, comp)\n"
 		"  -v, --version      Displays version information\n"
@@ -193,7 +194,7 @@ static int usage(const char* prog)
 
 int main(int argc, char* argv[])
 {
-	const char *inFile = nullptr, *outFile = nullptr, *stageName = nullptr;
+	const char *inFile = nullptr, *outFile = nullptr, *tgsiFile = nullptr, *stageName = nullptr;
 
 	static struct option long_options[] =
 	{
@@ -205,11 +206,12 @@ int main(int argc, char* argv[])
 	};
 
 	int opt, optidx = 0;
-	while ((opt = getopt_long(argc, argv, "o:s:?v", long_options, &optidx)) != -1)
+	while ((opt = getopt_long(argc, argv, "o:t:s:?v", long_options, &optidx)) != -1)
 	{
 		switch (opt)
 		{
 			case 'o': outFile = optarg; break;
+			case 't': tgsiFile = optarg; break;
 			case 's': stageName = optarg; break;
 			case '?': usage(argv[0]); return EXIT_SUCCESS;
 			case 'v': printf("%s - Built on %s %s\n", "unholy_abomination_of_mankind", __DATE__, __TIME__); return EXIT_SUCCESS;
@@ -277,7 +279,15 @@ int main(int argc, char* argv[])
 
 	unsigned int num_tokens;
 	const struct tgsi_token* tokens = glsl_program_get_tokens(prg, num_tokens);
-	tgsi_dump_to_file(tokens, TGSI_DUMP_FLOAT_AS_HEX, stdout);
+	if (tgsiFile)
+	{
+		FILE *ft = fopen(tgsiFile, "w");
+		if (ft)
+		{
+			tgsi_dump_to_file(tokens, TGSI_DUMP_FLOAT_AS_HEX, ft);
+			fclose(ft);
+		}
+	}
 
 	struct nv50_ir_prog_info info = {0};
 	switch (stage)
