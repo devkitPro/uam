@@ -481,7 +481,8 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 		{
 			gl_program_parameter *p = &pl->Parameters[i];
 			unsigned location = 0;
-			prg->UniformHash->get(location, p->Name);
+			if (!prg->UniformHash->get(location, p->Name))
+				continue;
 			gl_uniform_storage *storage = &prg->data->UniformStorage[location];
 			if (storage->builtin || storage->hidden)
 				continue;
