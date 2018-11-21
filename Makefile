@@ -113,7 +113,7 @@ export THIS_MAKEFILE := $(abspath $(firstword $(MAKEFILE_LIST)))
 #---------------------------------------------------------------------------------
 all:
 	@mkdir -p $(BUILD)
-	@make --no-print-directory -C $(BUILD) -f $(THIS_MAKEFILE)
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(THIS_MAKEFILE)
 
 #---------------------------------------------------------------------------------
 clean:
