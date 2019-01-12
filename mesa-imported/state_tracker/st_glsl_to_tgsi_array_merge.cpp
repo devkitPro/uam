@@ -126,11 +126,13 @@
 
 #include "program/prog_instruction.h"
 #include "util/u_math.h"
-#include <ostream>
 #include <cassert>
 #include <algorithm>
 
+#ifndef NDEBUG
+#include <ostream>
 #include <iostream>
+#endif
 
 #include "st_glsl_to_tgsi_array_merge.h"
 
@@ -302,6 +304,7 @@ void array_live_range::set_target(array_live_range  *target)
    target_array = target;
 }
 
+#ifndef NDEBUG
 void array_live_range::print(std::ostream& os) const
 {
    os << "[id:" << id
@@ -312,6 +315,7 @@ void array_live_range::print(std::ostream& os) const
       << ", nc:" << (int)used_component_count
       << "]";
 }
+#endif
 
 bool array_live_range::time_doesnt_overlap(const array_live_range& other) const
 {
@@ -388,6 +392,7 @@ uint16_t array_remapping::map_swizzles(uint16_t old_swizzle) const
    return out_swizzle;
 }
 
+#ifndef NDEBUG
 void array_remapping::print(std::ostream& os) const
 {
    if (is_valid()) {
@@ -399,6 +404,7 @@ void array_remapping::print(std::ostream& os) const
       os << "[unused]";
    }
 }
+#endif
 
 /* Required by the unit tests */
 bool operator == (const array_remapping& lhs, const array_remapping& rhs)
@@ -686,7 +692,7 @@ using namespace tgsi_array_merge;
 int  merge_arrays(int narrays,
 		  unsigned *array_sizes,
 		  exec_list *instructions,
-		  struct array_live_range *arr_live_ranges)
+		  class array_live_range *arr_live_ranges)
 {
    array_remapping *map= new array_remapping[narrays + 1];
 

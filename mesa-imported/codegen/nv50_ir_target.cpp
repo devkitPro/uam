@@ -153,6 +153,7 @@ Target *Target::create(unsigned int chipset)
    case 0x120:
    case 0x130:
       return getTargetGM107(chipset);
+#if 0 // fincs-edit
    case 0xc0:
    case 0xd0:
    case 0xe0:
@@ -164,6 +165,7 @@ Target *Target::create(unsigned int chipset)
    case 0x90:
    case 0xa0:
       return getTargetNV50(chipset);
+#endif
    default:
       ERROR("unsupported target: NV%x\n", chipset);
       return 0;

@@ -67,6 +67,9 @@ static void
 detect_conflicting_assignments(struct _mesa_glsl_parse_state *state,
                                exec_list *instructions);
 static void
+verify_subroutine_associated_funcs(struct _mesa_glsl_parse_state *state);
+
+static void
 remove_per_vertex_blocks(exec_list *instructions,
                          _mesa_glsl_parse_state *state, ir_variable_mode mode);
 
@@ -155,6 +158,7 @@ _mesa_ast_to_hir(exec_list *instructions, struct _mesa_glsl_parse_state *state)
    foreach_list_typed (ast_node, ast, link, & state->translation_unit)
       ast->hir(instructions, state);
 
+   verify_subroutine_associated_funcs(state);
    detect_recursion_unlinked(state, instructions);
    detect_conflicting_assignments(state, instructions);
 
@@ -246,8 +250,7 @@ get_implicit_conversion_operation(const glsl_type *to, const glsl_type *from,
       }
 
    case GLSL_TYPE_UINT:
-      if (!state->is_version(400, 0) && !state->ARB_gpu_shader5_enable
-          && !state->MESA_shader_integer_functions_enable)
+      if (!state->has_implicit_uint_to_int_conversion())
          return (ir_expression_operation)0;
       switch (from->base_type) {
          case GLSL_TYPE_INT: return ir_unop_i2u;
@@ -311,11 +314,7 @@ apply_implicit_conversion(const glsl_type *to, ir_rvalue * &from,
       return true;
 
    /* Prior to GLSL 1.20, there are no implicit conversions */
-   if (!state->is_version(120, 0))
-      return false;
-
-   /* ESSL does not allow implicit conversions */
-   if (state->es_shader)
+   if (!state->has_implicit_conversions())
       return false;
 
    /* From page 27 (page 33 of the PDF) of the GLSL 1.50 spec:
@@ -892,7 +891,8 @@ validate_assignment(struct _mesa_glsl_parse_state *state,
    }
    if (unsized_array) {
       if (is_initializer) {
-         return rhs;
+         if (rhs->type->get_scalar_type() == lhs->type->get_scalar_type())
+            return rhs;
       } else {
          _mesa_glsl_error(&loc, state,
                           "implicitly sized arrays cannot be assigned");
@@ -1685,6 +1685,12 @@ ast_expression::do_hir(exec_list *instructions,
       op[1] = this->subexpressions[1]->hir(instructions, state);
 
       orig_type = op[0]->type;
+
+      /* Break out if operand types were not parsed successfully. */
+      if ((op[0]->type == glsl_type::error_type ||
+           op[1]->type == glsl_type::error_type))
+         break;
+
       type = arithmetic_result_type(op[0], op[1],
                                     (this->oper == ast_mul_assign),
                                     state, & loc);
@@ -4232,6 +4238,29 @@ get_variable_being_redeclared(ir_variable **var_ptr, YYLTYPE loc,
 
    *is_redeclaration = true;
 
+   if (earlier->data.how_declared == ir_var_declared_implicitly) {
+      /* Verify that the redeclaration of a built-in does not change the
+       * storage qualifier.  There are a couple special cases.
+       *
+       * 1. Some built-in variables that are defined as 'in' in the
+       *    specification are implemented as system values.  Allow
+       *    ir_var_system_value -> ir_var_shader_in.
+       *
+       * 2. gl_LastFragData is implemented as a ir_var_shader_out, but the
+       *    specification requires that redeclarations omit any qualifier.
+       *    Allow ir_var_shader_out -> ir_var_auto for this one variable.
+       */
+      if (earlier->data.mode != var->data.mode &&
+          !(earlier->data.mode == ir_var_system_value &&
+            var->data.mode == ir_var_shader_in) &&
+          !(strcmp(var->name, "gl_LastFragData") == 0 &&
+            var->data.mode == ir_var_auto)) {
+         _mesa_glsl_error(&loc, state,
+                          "redeclaration cannot change qualification of `%s'",
+                          var->name);
+      }
+   }
+
    /* From page 24 (page 30 of the PDF) of the GLSL 1.50 spec,
     *
     * "It is legal to declare an array without a size and then
@@ -4240,11 +4269,6 @@ get_variable_being_redeclared(ir_variable **var_ptr, YYLTYPE loc,
     */
    if (earlier->type->is_unsized_array() && var->type->is_array()
        && (var->type->fields.array == earlier->type->fields.array)) {
-      /* FINISHME: This doesn't match the qualifiers on the two
-       * FINISHME: declarations.  It's not 100% clear whether this is
-       * FINISHME: required or not.
-       */
-
       const int size = var->type->array_size();
       check_builtin_array_max_size(var->name, size, loc, state);
       if ((size > 0) && (size <= earlier->data.max_array_access)) {
@@ -4257,11 +4281,13 @@ get_variable_being_redeclared(ir_variable **var_ptr, YYLTYPE loc,
       delete var;
       var = NULL;
       *var_ptr = NULL;
+   } else if (earlier->type != var->type) {
+      _mesa_glsl_error(&loc, state,
+                       "redeclaration of `%s' has incorrect type",
+                       var->name);
    } else if ((state->ARB_fragment_coord_conventions_enable ||
               state->is_version(150, 0))
-              && strcmp(var->name, "gl_FragCoord") == 0
-              && earlier->type == var->type
-              && var->data.mode == ir_var_shader_in) {
+              && strcmp(var->name, "gl_FragCoord") == 0) {
       /* Allow redeclaration of gl_FragCoord for ARB_fcc layout
        * qualifiers.
        */
@@ -4284,18 +4310,14 @@ get_variable_being_redeclared(ir_variable **var_ptr, YYLTYPE loc,
                   || strcmp(var->name, "gl_FrontSecondaryColor") == 0
                   || strcmp(var->name, "gl_BackSecondaryColor") == 0
                   || strcmp(var->name, "gl_Color") == 0
-                  || strcmp(var->name, "gl_SecondaryColor") == 0)
-              && earlier->type == var->type
-              && earlier->data.mode == var->data.mode) {
+                  || strcmp(var->name, "gl_SecondaryColor") == 0)) {
       earlier->data.interpolation = var->data.interpolation;
 
       /* Layout qualifiers for gl_FragDepth. */
    } else if ((state->is_version(420, 0) ||
                state->AMD_conservative_depth_enable ||
                state->ARB_conservative_depth_enable)
-              && strcmp(var->name, "gl_FragDepth") == 0
-              && earlier->type == var->type
-              && earlier->data.mode == var->data.mode) {
+              && strcmp(var->name, "gl_FragDepth") == 0) {
 
       /** From the AMD_conservative_depth spec:
        *     Within any shader, the first redeclarations of gl_FragDepth
@@ -4322,7 +4344,6 @@ get_variable_being_redeclared(ir_variable **var_ptr, YYLTYPE loc,
 
    } else if (state->has_framebuffer_fetch() &&
               strcmp(var->name, "gl_LastFragData") == 0 &&
-              var->type == earlier->type &&
               var->data.mode == ir_var_auto) {
       /* According to the EXT_shader_framebuffer_fetch spec:
        *
@@ -4336,32 +4357,12 @@ get_variable_being_redeclared(ir_variable **var_ptr, YYLTYPE loc,
       earlier->data.precision = var->data.precision;
       earlier->data.memory_coherent = var->data.memory_coherent;
 
-   } else if (earlier->data.how_declared == ir_var_declared_implicitly &&
-              state->allow_builtin_variable_redeclaration) {
+   } else if ((earlier->data.how_declared == ir_var_declared_implicitly &&
+               state->allow_builtin_variable_redeclaration) ||
+              allow_all_redeclarations) {
       /* Allow verbatim redeclarations of built-in variables. Not explicitly
        * valid, but some applications do it.
        */
-      if (earlier->data.mode != var->data.mode &&
-          !(earlier->data.mode == ir_var_system_value &&
-            var->data.mode == ir_var_shader_in)) {
-         _mesa_glsl_error(&loc, state,
-                          "redeclaration of `%s' with incorrect qualifiers",
-                          var->name);
-      } else if (earlier->type != var->type) {
-         _mesa_glsl_error(&loc, state,
-                          "redeclaration of `%s' has incorrect type",
-                          var->name);
-      }
-   } else if (allow_all_redeclarations) {
-      if (earlier->data.mode != var->data.mode) {
-         _mesa_glsl_error(&loc, state,
-                          "redeclaration of `%s' with incorrect qualifiers",
-                          var->name);
-      } else if (earlier->type != var->type) {
-         _mesa_glsl_error(&loc, state,
-                          "redeclaration of `%s' has incorrect type",
-                          var->name);
-      }
    } else {
       _mesa_glsl_error(&loc, state, "`%s' redeclared", var->name);
    }
@@ -6639,7 +6640,6 @@ ast_case_statement_list::hir(exec_list *instructions,
     * if default should be chosen or not.
     */
    if (!default_case.is_empty()) {
-      struct hash_entry *entry;
       ir_factory body(instructions, state);
 
       ir_expression *cmp = NULL;
@@ -8678,6 +8678,38 @@ detect_conflicting_assignments(struct _mesa_glsl_parse_state *state,
    }
 }
 
+static void
+verify_subroutine_associated_funcs(struct _mesa_glsl_parse_state *state)
+{
+   YYLTYPE loc;
+   memset(&loc, 0, sizeof(loc));
+
+   /* Section 6.1.2 (Subroutines) of the GLSL 4.00 spec says:
+    *
+    *   "A program will fail to compile or link if any shader
+    *    or stage contains two or more functions with the same
+    *    name if the name is associated with a subroutine type."
+    */
+
+   for (int i = 0; i < state->num_subroutines; i++) {
+      unsigned definitions = 0;
+      ir_function *fn = state->subroutines[i];
+      /* Calculate number of function definitions with the same name */
+      foreach_in_list(ir_function_signature, sig, &fn->signatures) {
+         if (sig->is_defined) {
+            if (++definitions > 1) {
+               _mesa_glsl_error(&loc, state,
+                     "%s shader contains two or more function "
+                     "definitions with name `%s', which is "
+                     "associated with a subroutine type.\n",
+                     _mesa_shader_stage_to_string(state->stage),
+                     fn->name);
+               return;
+            }
+         }
+      }
+   }
+}
 
 static void
 remove_per_vertex_blocks(exec_list *instructions,
@@ -8728,4 +8760,12 @@ remove_per_vertex_blocks(exec_list *instructions,
          var->remove();
       }
    }
+}
+
+ir_rvalue *
+ast_warnings_toggle::hir(exec_list *,
+                         struct _mesa_glsl_parse_state *state)
+{
+   state->warnings_enabled = enable;
+   return NULL;
 }

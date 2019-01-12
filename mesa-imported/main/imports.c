@@ -82,7 +82,9 @@ extern int vsnprintf(char *str, size_t count, const char *fmt, va_list arg);
 void *
 _mesa_align_malloc(size_t bytes, unsigned long alignment)
 {
-#if defined(HAVE_POSIX_MEMALIGN)
+#if defined(_ISOC11_SOURCE)
+   return aligned_alloc(alignment, (bytes + alignment - 1) &~ (alignment - 1));
+#elif defined(HAVE_POSIX_MEMALIGN)
    void *mem;
    int err = posix_memalign(& mem, alignment, bytes);
    if (err)
@@ -121,7 +123,7 @@ _mesa_align_malloc(size_t bytes, unsigned long alignment)
 void *
 _mesa_align_calloc(size_t bytes, unsigned long alignment)
 {
-#if defined(HAVE_POSIX_MEMALIGN)
+#if defined(_ISOC11_SOURCE) || defined(HAVE_POSIX_MEMALIGN)
    void *mem;
    
    mem = _mesa_align_malloc(bytes, alignment);
@@ -175,7 +177,7 @@ _mesa_align_calloc(size_t bytes, unsigned long alignment)
 void
 _mesa_align_free(void *ptr)
 {
-#if defined(HAVE_POSIX_MEMALIGN)
+#if defined(_ISOC11_SOURCE) || defined(HAVE_POSIX_MEMALIGN)
    free(ptr);
 #elif defined(_WIN32)
    _aligned_free(ptr);

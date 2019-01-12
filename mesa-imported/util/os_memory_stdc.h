@@ -48,7 +48,17 @@
    realloc(_old_ptr, _new_size + 0*(_old_size))
 
 
-#if defined(HAVE_POSIX_MEMALIGN)
+#if defined(_ISOC11_SOURCE)
+
+static inline void *
+os_malloc_aligned(size_t size, size_t alignment)
+{
+   return aligned_alloc(alignment, (size + alignment - 1) &~ (alignment - 1));
+}
+
+#define os_free_aligned(_ptr) free(_ptr)
+
+#elif defined(HAVE_POSIX_MEMALIGN)
 
 static inline void *
 os_malloc_aligned(size_t size, size_t alignment)

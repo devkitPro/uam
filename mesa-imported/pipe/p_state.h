@@ -443,6 +443,13 @@ struct pipe_surface
    uint16_t width;               /**< logical width in pixels */
    uint16_t height;              /**< logical height in pixels */
 
+   /**
+    * Number of samples for the surface.  This will be 0 if rendering
+    * should use the resource's nr_samples, or another value if the resource
+    * is bound using FramebufferTexture2DMultisampleEXT.
+    */
+   unsigned nr_samples:8;
+
    union pipe_surface_desc u;
 };
 
@@ -484,7 +491,8 @@ struct pipe_image_view
 {
    struct pipe_resource *resource; /**< resource into which this is a view  */
    enum pipe_format format;      /**< typed PIPE_FORMAT_x */
-   unsigned access;              /**< PIPE_IMAGE_ACCESS_x */
+   uint16_t access;              /**< PIPE_IMAGE_ACCESS_x */
+   uint16_t shader_access;       /**< PIPE_IMAGE_ACCESS_x */
 
    union {
       struct {

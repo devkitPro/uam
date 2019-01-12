@@ -70,7 +70,7 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
 					       gl_shader_stage stage,
                                                void *mem_ctx)
    : ctx(_ctx), cs_input_local_size_specified(false), cs_input_local_size(),
-     switch_state()
+     switch_state(), warnings_enabled(true)
 {
    assert(stage < MESA_SHADER_STAGES);
    this->stage = stage;
@@ -535,11 +535,13 @@ void
 _mesa_glsl_warning(const YYLTYPE *locp, _mesa_glsl_parse_state *state,
 		   const char *fmt, ...)
 {
-   va_list ap;
+   if (state->warnings_enabled) {
+      va_list ap;
 
-   va_start(ap, fmt);
-   _mesa_glsl_msg(locp, state, MESA_DEBUG_TYPE_OTHER, fmt, ap);
-   va_end(ap);
+      va_start(ap, fmt);
+      _mesa_glsl_msg(locp, state, MESA_DEBUG_TYPE_OTHER, fmt, ap);
+      va_end(ap);
+   }
 }
 
 
@@ -712,6 +714,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(AMD_gpu_shader_int64),
    EXT(AMD_shader_stencil_export),
    EXT(AMD_shader_trinary_minmax),
+   EXT(AMD_texture_texture4),
    EXT(AMD_vertex_shader_layer),
    EXT(AMD_vertex_shader_viewport_index),
    EXT(ANDROID_extension_pack_es31a),
@@ -726,6 +729,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(EXT_separate_shader_objects),
    EXT(EXT_shader_framebuffer_fetch),
    EXT(EXT_shader_framebuffer_fetch_non_coherent),
+   EXT(EXT_shader_implicit_conversions),
    EXT(EXT_shader_integer_mix),
    EXT_AEP(EXT_shader_io_blocks),
    EXT(EXT_shader_samples_identical),
@@ -735,7 +739,6 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT_AEP(EXT_texture_buffer),
    EXT_AEP(EXT_texture_cube_map_array),
    EXT(INTEL_conservative_rasterization),
-   EXT(INTEL_fragment_shader_ordering),
    EXT(INTEL_shader_atomic_float_minmax),
    EXT(MESA_shader_integer_functions),
    EXT(NV_fragment_shader_interlock),

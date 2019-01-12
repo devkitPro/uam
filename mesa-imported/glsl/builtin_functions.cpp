@@ -419,6 +419,12 @@ texture_gather_cube_map_array(const _mesa_glsl_parse_state *state)
 }
 
 static bool
+texture_texture4(const _mesa_glsl_parse_state *state)
+{
+   return state->AMD_texture_texture4_enable;
+}
+
+static bool
 texture_gather_or_es31(const _mesa_glsl_parse_state *state)
 {
    return state->is_version(400, 310) ||
@@ -523,12 +529,6 @@ static bool
 supports_nv_fragment_shader_interlock(const _mesa_glsl_parse_state *state)
 {
    return state->NV_fragment_shader_interlock_enable;
-}
-
-static bool
-supports_intel_fragment_shader_ordering(const _mesa_glsl_parse_state *state)
-{
-   return state->INTEL_fragment_shader_ordering_enable;
 }
 
 static bool
@@ -1310,11 +1310,6 @@ builtin_builder::create_intrinsics()
                 _invocation_interlock_intrinsic(
                    supports_arb_fragment_shader_interlock,
                    ir_intrinsic_end_invocation_interlock), NULL);
-
-   add_function("__intrinsic_begin_fragment_shader_ordering",
-                _invocation_interlock_intrinsic(
-                   supports_intel_fragment_shader_ordering,
-                   ir_intrinsic_begin_fragment_shader_ordering), NULL);
 
    add_function("__intrinsic_shader_clock",
                 _shader_clock_intrinsic(shader_clock,
@@ -2902,6 +2897,10 @@ builtin_builder::create_builtins()
                 _texture(ir_txd, shader_texture_lod_and_rect, glsl_type::vec4_type,  glsl_type::sampler2DRectShadow_type, glsl_type::vec4_type, TEX_PROJECT),
                 NULL);
 
+   add_function("texture4",
+                _texture(ir_tg4, texture_texture4, glsl_type::vec4_type, glsl_type::sampler2D_type, glsl_type::vec2_type),
+                NULL);
+
    add_function("textureGather",
                 _texture(ir_tg4, texture_gather_or_es31, glsl_type::vec4_type, glsl_type::sampler2D_type, glsl_type::vec2_type),
                 _texture(ir_tg4, texture_gather_or_es31, glsl_type::ivec4_type, glsl_type::isampler2D_type, glsl_type::vec2_type),
@@ -3428,12 +3427,6 @@ builtin_builder::create_builtins()
                 _invocation_interlock(
                    "__intrinsic_end_invocation_interlock",
                    supports_nv_fragment_shader_interlock),
-                NULL);
-
-   add_function("beginFragmentShaderOrderingINTEL",
-                _invocation_interlock(
-                   "__intrinsic_begin_fragment_shader_ordering",
-                   supports_intel_fragment_shader_ordering),
                 NULL);
 
    add_function("anyInvocationARB",

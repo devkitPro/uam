@@ -877,6 +877,7 @@ glsl_to_tgsi_visitor::get_opcode(enum tgsi_opcode op,
       case7(ISHR,    LAST, ISHR,    USHR,    LAST,    I64SHR,  U64SHR);
       case7(ATOMIMAX,LAST, ATOMIMAX,ATOMUMAX,LAST,    LAST,    LAST);
       case7(ATOMIMIN,LAST, ATOMIMIN,ATOMUMIN,LAST,    LAST,    LAST);
+      case7(ATOMUADD,ATOMFADD,ATOMUADD,ATOMUADD,LAST, LAST,    LAST);
 
       casecomp(SEQ, FSEQ, USEQ, USEQ, DSEQ, U64SEQ, U64SEQ);
       casecomp(SNE, FSNE, USNE, USNE, DSNE, U64SNE, U64SNE);
@@ -1369,6 +1370,10 @@ glsl_to_tgsi_visitor::try_emit_mad(ir_expression *ir, int mul_operand)
    int nonmul_operand = 1 - mul_operand;
    st_src_reg a, b, c;
    st_dst_reg result_dst;
+
+   // there is no TGSI opcode for this
+   if (ir->type->is_integer_64())
+      return false;
 
    ir_expression *expr = ir->operands[mul_operand]->as_expression();
    if (!expr || expr->operation != ir_binop_mul)
@@ -2180,7 +2185,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
             emit_asm(ir, TGSI_OPCODE_USHR, st_dst_reg(index_reg), offset,
                  st_src_reg_for_int(4));
             cbuf.reladdr = ralloc(mem_ctx, st_src_reg);
-            memcpy(cbuf.reladdr, &index_reg, sizeof(index_reg));
+            *cbuf.reladdr = index_reg;
          }
 
          if (const_uniform_block) {
@@ -2189,7 +2194,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
          } else {
             /* Relative/variable constant buffer */
             cbuf.reladdr2 = ralloc(mem_ctx, st_src_reg);
-            memcpy(cbuf.reladdr2, &op[0], sizeof(st_src_reg));
+            *cbuf.reladdr2 = op[0];
          }
          cbuf.has_index2 = true;
 
@@ -2900,12 +2905,12 @@ glsl_to_tgsi_visitor::visit(ir_dereference_array *ir)
 
       if (is_2D) {
          src.reladdr2 = ralloc(mem_ctx, st_src_reg);
-         memcpy(src.reladdr2, &index_reg, sizeof(index_reg));
+         *src.reladdr2 = index_reg;
          src.index2D = 0;
          src.has_index2 = true;
       } else {
          src.reladdr = ralloc(mem_ctx, st_src_reg);
-         memcpy(src.reladdr, &index_reg, sizeof(index_reg));
+         *src.reladdr = index_reg;
       }
    }
 
@@ -4164,7 +4169,6 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
    case ir_intrinsic_generic_atomic_comp_swap:
    case ir_intrinsic_begin_invocation_interlock:
    case ir_intrinsic_end_invocation_interlock:
-   case ir_intrinsic_begin_fragment_shader_ordering:
       unreachable("Invalid intrinsic");
    }
 }
@@ -4242,8 +4246,7 @@ glsl_to_tgsi_visitor::get_deref_offsets(ir_dereference *ir,
    unsigned location = 0;
    ir_variable *var = ir->variable_referenced();
 
-   memset(reladdr, 0, sizeof(*reladdr));
-   reladdr->file = PROGRAM_UNDEFINED;
+   reladdr->reset();
 
    *base = 0;
    *array_size = 1;
@@ -4752,6 +4755,7 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
    ctx = NULL;
    prog = NULL;
    precise = 0;
+   need_uarl = false;
    shader_program = NULL;
    shader = NULL;
    options = NULL;
@@ -5690,7 +5694,7 @@ glsl_to_tgsi_visitor::split_arrays(void)
 void
 glsl_to_tgsi_visitor::merge_registers(void)
 {
-   struct array_live_range *arr_live_ranges = NULL;
+   class array_live_range *arr_live_ranges = NULL;
 
    struct register_live_range *reg_live_ranges =
 	 rzalloc_array(mem_ctx, struct register_live_range, this->next_temp);
@@ -6297,6 +6301,7 @@ compile_tgsi_instruction(struct st_translate *t,
    case TGSI_OPCODE_ATOMUMAX:
    case TGSI_OPCODE_ATOMIMIN:
    case TGSI_OPCODE_ATOMIMAX:
+   case TGSI_OPCODE_ATOMFADD:
    case TGSI_OPCODE_IMG2HND:
       for (i = num_src - 1; i >= 0; i--)
          src[i + 1] = src[i];
@@ -7405,9 +7410,13 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 #if 0 // fincs-edit
    struct pipe_screen *pscreen = ctx->st->pipe->screen;
 
+#ifndef __SWITCH__
    enum pipe_shader_ir preferred_ir = (enum pipe_shader_ir)
       pscreen->get_shader_param(pscreen, PIPE_SHADER_VERTEX,
                                 PIPE_SHADER_CAP_PREFERRED_IR);
+#else
+   const enum pipe_shader_ir preferred_ir = PIPE_SHADER_IR_TGSI;
+#endif
    bool use_nir = preferred_ir == PIPE_SHADER_IR_NIR;
 
    /* Return early if we are loading the shader from on-disk cache */
@@ -7576,24 +7585,16 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 }
 
 void
-st_translate_stream_output_info(glsl_to_tgsi_visitor *glsl_to_tgsi,
-                                const ubyte outputMapping[],
-                                struct pipe_stream_output_info *so)
-{
-   if (!glsl_to_tgsi->shader_program->last_vert_prog)
-      return;
-
-   struct gl_transform_feedback_info *info =
-      glsl_to_tgsi->shader_program->last_vert_prog->sh.LinkedTransformFeedback;
-   st_translate_stream_output_info2(info, outputMapping, so);
-}
-
-void
-st_translate_stream_output_info2(struct gl_transform_feedback_info *info,
+st_translate_stream_output_info(struct gl_transform_feedback_info *info,
                                 const ubyte outputMapping[],
                                 struct pipe_stream_output_info *so)
 {
    unsigned i;
+
+   if (!info) {
+      so->num_outputs = 0;
+      return;
+   }
 
    for (i = 0; i < info->NumOutputs; i++) {
       so->output[i].register_index =

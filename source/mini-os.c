@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "os/os_misc.h"
+#include "util/os_misc.h"
 
 void os_log_message(const char *message)
 {

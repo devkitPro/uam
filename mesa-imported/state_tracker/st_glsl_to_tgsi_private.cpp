@@ -28,6 +28,10 @@
 #include "program/prog_instruction.h" // fincs-edit
 //#include "program/prog_print.h" // fincs-edit
 
+#ifndef NDEBUG
+#include <ostream>
+#endif
+
 static int swizzle_for_type(const glsl_type *type, int component = 0)
 {
    unsigned num_elements = 4;
@@ -116,7 +120,7 @@ st_src_reg::st_src_reg(gl_register_file file, int index, enum glsl_base_type typ
    this->is_double_vertex_input = false;
 }
 
-st_src_reg::st_src_reg()
+void st_src_reg::reset()
 {
    this->type = GLSL_TYPE_ERROR;
    this->file = PROGRAM_UNDEFINED;
@@ -131,6 +135,11 @@ st_src_reg::st_src_reg()
    this->double_reg2 = false;
    this->array_id = 0;
    this->is_double_vertex_input = false;
+}
+
+st_src_reg::st_src_reg()
+{
+   reset();
 }
 
 st_src_reg::st_src_reg(const st_src_reg &reg)
@@ -216,9 +225,9 @@ bool operator == (const st_src_reg& lhs, const st_src_reg& rhs)
    return result;
 }
 
-#if 0 // fincs-edit
 static const char swz_txt[] = "xyzw";
 
+#ifndef NDEBUG
 std::ostream& operator << (std::ostream& os, const st_src_reg& reg)
 {
    if (reg.negate)
@@ -360,7 +369,7 @@ bool operator == (const st_dst_reg& lhs, const st_dst_reg& rhs)
    return result;
 }
 
-#if 0 // fincs-edit
+#ifndef NDEBUG
 std::ostream& operator << (std::ostream& os, const st_dst_reg& reg)
 {
    os << _mesa_register_file_name(reg.file);

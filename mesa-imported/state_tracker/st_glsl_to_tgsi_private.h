@@ -31,7 +31,7 @@
 #include "compiler/glsl_types.h"
 #include "glsl/ir.h" // fincs-edit
 #include "tgsi/tgsi_info.h"
-#include <ostream>
+#include <iosfwd>
 
 int swizzle_for_size(int size);
 
@@ -51,6 +51,7 @@ public:
    st_src_reg();
    st_src_reg(const st_src_reg &reg);
    void operator=(const st_src_reg &reg);
+   void reset();
 
    explicit st_src_reg(st_dst_reg reg);
 
@@ -180,6 +181,7 @@ is_resource_instruction(unsigned opcode)
    case TGSI_OPCODE_ATOMUMAX:
    case TGSI_OPCODE_ATOMIMIN:
    case TGSI_OPCODE_ATOMIMAX:
+   case TGSI_OPCODE_ATOMFADD:
    case TGSI_OPCODE_IMG2HND:
       return true;
    default:

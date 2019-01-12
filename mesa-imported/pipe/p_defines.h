@@ -341,7 +341,13 @@ enum pipe_transfer_usage
     * PIPE_RESOURCE_FLAG_MAP_COHERENT must be set when creating
     * the resource.
     */
-   PIPE_TRANSFER_COHERENT = (1 << 14)
+   PIPE_TRANSFER_COHERENT = (1 << 14),
+
+   /**
+    * This and higher bits are reserved for private use by drivers. Drivers
+    * should use this as (PIPE_TRANSFER_DRV_PRV << i).
+    */
+   PIPE_TRANSFER_DRV_PRV = (1 << 24)
 };
 
 /**
@@ -400,6 +406,9 @@ enum pipe_flush_flags
  * Create a low priority context.
  */
 #define PIPE_CONTEXT_LOW_PRIORITY      (1 << 5)
+
+/** Stop execution if the device is reset. */
+#define PIPE_CONTEXT_LOSE_CONTEXT_ON_RESET (1 << 6)
 
 /**
  * Flags for pipe_context::memory_barrier.
@@ -621,12 +630,10 @@ enum pipe_conservative_raster_mode
  * resource_get_handle flags.
  */
 /* Requires pipe_context::flush_resource before external use. */
-#define PIPE_HANDLE_USAGE_EXPLICIT_FLUSH  (1 << 0)
+#define PIPE_HANDLE_USAGE_EXPLICIT_FLUSH     (1 << 0)
 /* Expected external use of the resource: */
-#define PIPE_HANDLE_USAGE_READ            (1 << 1)
-#define PIPE_HANDLE_USAGE_WRITE           (1 << 2)
-#define PIPE_HANDLE_USAGE_READ_WRITE      (PIPE_HANDLE_USAGE_READ | \
-                                           PIPE_HANDLE_USAGE_WRITE)
+#define PIPE_HANDLE_USAGE_FRAMEBUFFER_WRITE  (1 << 1)
+#define PIPE_HANDLE_USAGE_SHADER_WRITE       (1 << 2)
 
 /**
  * pipe_image_view access flags.
@@ -825,6 +832,8 @@ enum pipe_cap
    PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTER_BUFFERS,
    PIPE_CAP_MAX_TEXTURE_UPLOAD_MEMORY_BUDGET,
    PIPE_CAP_MAX_VERTEX_ELEMENT_SRC_OFFSET,
+   PIPE_CAP_SURFACE_SAMPLE_COUNT,
+   PIPE_CAP_TGSI_ATOMFADD,
 };
 
 /**
