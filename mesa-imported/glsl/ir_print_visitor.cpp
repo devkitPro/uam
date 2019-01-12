@@ -29,18 +29,6 @@
 #include "util/hash_table.h"
 #include "util/u_string.h"
 
-#if !defined(PRId64) && defined(WIN32) // fincs-edit: whyyyyyyyy
-#define PRId64 "I64"
-#endif
-
-#if !defined(PRIi64) && defined(WIN32) // fincs-edit: whyyyyyyyy
-#define PRIi64 "I64"
-#endif
-
-#if !defined(PRIu64) && defined(WIN32) // fincs-edit: whyyyyyyyy
-#define PRIu64 "I64u"
-#endif
-
 static void print_type(FILE *f, const glsl_type *t);
 
 void

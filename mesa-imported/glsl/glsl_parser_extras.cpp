@@ -41,14 +41,6 @@
 #include "loop_analysis.h"
 #include "builtin_functions.h"
 
-#if !defined(PRId64) && defined(WIN32) // fincs-edit: whyyyyyyyy
-#define PRId64 "I64"
-#endif
-
-#if !defined(PRIu64) && defined(WIN32) // fincs-edit: whyyyyyyyy
-#define PRIu64 "I64u"
-#endif
-
 /**
  * Format a short human-readable description of the given GLSL version.
  */

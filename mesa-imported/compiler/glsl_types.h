@@ -1,4 +1,4 @@
-﻿/* -*- c++ -*- */
+/* -*- c++ -*- */
 /*
  * Copyright © 2009 Intel Corporation
  *
