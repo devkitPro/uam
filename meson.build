@@ -28,31 +28,33 @@ pre_args = [
 	'-D_USE_MATH_DEFINES',
 ]
 
+if host_machine.system() != 'windows'
+	foreach f : [ 'posix_memalign' ]
+		if compiler_c.has_function(f)
+			pre_args += '-DHAVE_@0@'.format(f.to_upper())
+		endif
+	endforeach
+endif
+
+foreach a : [ '-ffunction-sections' ]
+	if compiler_c.has_argument(a)
+		pre_args += a
+	endif
+endforeach
+
 foreach a : pre_args
 	add_project_arguments(a, language : ['c', 'cpp'])
 endforeach
 
-cpp_flags = [
-	'-Wno-class-memaccess',
-	'-Wno-non-virtual-dtor',
-]
-
-foreach a : cpp_flags
+foreach a : [ '-Wno-class-memaccess', '-Wno-non-virtual-dtor' ]
 	if compiler_cpp.has_argument(a)
 		add_project_arguments(a, language : 'cpp')
 	endif
 endforeach
 
-linker_flags = [
-	'-Wl,--gc-sections',
-]
-
-foreach a : linker_flags
+foreach a : [ '-Wl,--gc-sections' ]
 	if compiler_c.has_link_argument(a)
-		add_project_link_arguments(a, language : 'c')
-	endif
-	if compiler_cpp.has_link_argument(a)
-		add_project_link_arguments(a, language : 'cpp')
+		add_project_link_arguments(a, language : [ 'c', 'cpp' ])
 	endif
 endforeach
 
