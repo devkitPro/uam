@@ -214,7 +214,7 @@ int main(int argc, char* argv[])
 			case 't': tgsiFile = optarg; break;
 			case 's': stageName = optarg; break;
 			case '?': usage(argv[0]); return EXIT_SUCCESS;
-			case 'v': printf("%s - Built on %s %s\n", "unholy_abomination_of_mankind", __DATE__, __TIME__); return EXIT_SUCCESS;
+			case 'v': printf("%s - Built on %s %s\n", PACKAGE_STRING, __DATE__, __TIME__); return EXIT_SUCCESS;
 			default:  return usage(argv[0]);
 		}
 	}
