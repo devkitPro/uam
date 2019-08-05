@@ -128,11 +128,13 @@ NVC0LegalizeSSA::handleRCPRSQ(Instruction *i)
    Value *src[2], *dst[2], *def = i->getDef(0);
    bld.mkSplit(src, 4, i->getSrc(0));
 
+   /* fincs-edit: Use native instruction instead of library function.
    int chip = prog->getTarget()->getChipset();
    if (chip >= NVISA_GK104_CHIPSET) {
       handleRCPRSQLib(i, src);
       return;
    }
+   */
 
    // 2. We don't care about the low 32 bits of the destination. Stick a 0 in.
    dst[0] = bld.loadImm(NULL, 0);
