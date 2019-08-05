@@ -25,12 +25,6 @@
 
 #include <inttypes.h>
 
-// fincs-edit: whyyyyyyy
-#if !defined(PRIx64) && defined(_WIN32)
-#define PRIx64 "I64x"
-#endif
-
-
 namespace nv50_ir {
 
 enum TextStyle

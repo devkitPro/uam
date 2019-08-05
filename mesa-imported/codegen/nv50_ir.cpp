@@ -1120,6 +1120,7 @@ Program::Program(Type type, Target *arch)
    binSize = 0;
 
    maxGPR = -1;
+   fp64 = false;
 
    main = new Function(this, "MAIN", ~0);
    calls.insert(&main->call);

@@ -1,8 +1,8 @@
 /**************************************************************************
- * 
+ *
  * Copyright 2008 VMware, Inc.
  * All Rights Reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -10,11 +10,11 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
@@ -22,16 +22,16 @@
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * 
+ *
  **************************************************************************/
 
 /**
  * @file
  * Cross-platform debugging helpers.
- * 
- * For now it just has assert and printf replacements, but it might be extended 
- * with stack trace reports and more advanced logging in the near future. 
- * 
+ *
+ * For now it just has assert and printf replacements, but it might be extended
+ * with stack trace reports and more advanced logging in the near future.
+ *
  * @author Jose Fonseca <jfonseca@vmware.com>
  */
 
@@ -54,14 +54,14 @@ extern "C" {
 #endif
 
 
-#if defined(__GNUC__)
+#if 0 /* defined(__GNUC__) */ // fincs-edit
 #define _util_printf_format(fmt, list) __attribute__ ((format (printf, fmt, list)))
 #else
 #define _util_printf_format(fmt, list)
 #endif
 
 void _debug_vprintf(const char *format, va_list ap);
-   
+
 
 static inline void
 _debug_printf(const char *format, ...)
@@ -160,9 +160,9 @@ debug_get_num_option(const char *name, long dfault);
 #ifdef _MSC_VER
 __declspec(noreturn)
 #endif
-void _debug_assert_fail(const char *expr, 
-                        const char *file, 
-                        unsigned line, 
+void _debug_assert_fail(const char *expr,
+                        const char *file,
+                        unsigned line,
                         const char *function)
 #if defined(__GNUC__) && !defined(DEBUG)
    __attribute__((noreturn))
@@ -170,10 +170,10 @@ void _debug_assert_fail(const char *expr,
 ;
 
 
-/** 
+/**
  * Assert macro
- * 
- * Do not expect that the assert call terminates -- errors must be handled 
+ *
+ * Do not expect that the assert call terminates -- errors must be handled
  * regardless of assert behavior.
  *
  * For non debug builds the assert macro will expand to a no-op, so do not
@@ -201,7 +201,7 @@ void _debug_assert_fail(const char *expr,
    _debug_printf("%s\n", __FUNCTION__)
 #else
 #define debug_checkpoint() \
-   ((void)0) 
+   ((void)0)
 #endif
 
 
@@ -213,7 +213,7 @@ void _debug_assert_fail(const char *expr,
    _debug_printf("%s:%u:%s\n", __FILE__, __LINE__, __FUNCTION__)
 #else
 #define debug_checkpoint_full() \
-   ((void)0) 
+   ((void)0)
 #endif
 
 
@@ -225,7 +225,7 @@ void _debug_assert_fail(const char *expr,
    _debug_printf("%s:%u:%s: warning: %s\n", __FILE__, __LINE__, __FUNCTION__, __msg)
 #else
 #define debug_warning(__msg) \
-   ((void)0) 
+   ((void)0)
 #endif
 
 
@@ -244,7 +244,7 @@ void _debug_assert_fail(const char *expr,
    } while (0)
 #else
 #define debug_warn_once(__msg) \
-   ((void)0) 
+   ((void)0)
 #endif
 
 
@@ -253,7 +253,7 @@ void _debug_assert_fail(const char *expr,
  */
 #ifdef DEBUG
 #define debug_error(__msg) \
-   _debug_printf("%s:%u:%s: error: %s\n", __FILE__, __LINE__, __FUNCTION__, __msg) 
+   _debug_printf("%s:%u:%s: error: %s\n", __FILE__, __LINE__, __FUNCTION__, __msg)
 #else
 #define debug_error(__msg) \
    _debug_printf("error: %s\n", __msg)
@@ -294,7 +294,7 @@ struct debug_named_value
 
 /**
  * Some C pre-processor magic to simplify creating named values.
- * 
+ *
  * Example:
  * @code
  * static const debug_named_value my_names[] = {
@@ -303,9 +303,9 @@ struct debug_named_value
  *    DEBUG_NAMED_VALUE(MY_ENUM_VALUE_Z),
  *    DEBUG_NAMED_VALUE_END
  * };
- * 
+ *
  *    ...
- *    debug_printf("%s = %s\n", 
+ *    debug_printf("%s = %s\n",
  *                 name,
  *                 debug_dump_enum(my_names, my_value));
  *    ...
@@ -320,11 +320,11 @@ struct debug_named_value
  * Convert a enum value to a string.
  */
 const char *
-debug_dump_enum(const struct debug_named_value *names, 
+debug_dump_enum(const struct debug_named_value *names,
                 unsigned long value);
 
 const char *
-debug_dump_enum_noprefix(const struct debug_named_value *names, 
+debug_dump_enum_noprefix(const struct debug_named_value *names,
                          const char *prefix,
                          unsigned long value);
 
@@ -333,7 +333,7 @@ debug_dump_enum_noprefix(const struct debug_named_value *names,
  * Convert binary flags value to a string.
  */
 const char *
-debug_dump_flags(const struct debug_named_value *names, 
+debug_dump_flags(const struct debug_named_value *names,
                  unsigned long value);
 
 
@@ -376,14 +376,14 @@ void debug_funclog_enter_exit(const char* f, const int line, const char* file);
 
 /**
  * Get option.
- * 
- * It is an alias for getenv on Linux. 
- * 
- * On Windows it reads C:\gallium.cfg, which is a text file with CR+LF line 
+ *
+ * It is an alias for getenv on Linux.
+ *
+ * On Windows it reads C:\gallium.cfg, which is a text file with CR+LF line
  * endings with one option per line as
- *  
+ *
  *   NAME=value
- * 
+ *
  * This file must be terminated with an extra empty line.
  */
 const char *
@@ -396,7 +396,7 @@ long
 debug_get_num_option(const char *name, long dfault);
 
 uint64_t
-debug_get_flags_option(const char *name, 
+debug_get_flags_option(const char *name,
                        const struct debug_named_value *flags,
                        uint64_t dfault);
 

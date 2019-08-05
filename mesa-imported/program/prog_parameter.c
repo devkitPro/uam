@@ -28,12 +28,14 @@
  * \author Brian Paul
  */
 
+
 #include "main/glheader.h"
 #include "main/imports.h"
 #include "main/macros.h"
 #include "prog_instruction.h"
 #include "prog_parameter.h"
 #include "prog_statevars.h"
+
 
 /**
  * Look for a float vector in the given parameter list.  The float vector
@@ -269,6 +271,7 @@ _mesa_add_parameter(struct gl_program_parameter_list *paramList,
    p->Name = strdup(name ? name : "");
    p->Type = type;
    p->Size = size;
+   p->Padded = pad_and_align;
    p->DataType = datatype;
 
    paramList->ParameterValueOffset[oldNum] = oldValNum;

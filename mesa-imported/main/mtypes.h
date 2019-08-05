@@ -2576,8 +2576,7 @@ enum gl_compile_status
 {
    COMPILE_FAILURE = 0,
    COMPILE_SUCCESS,
-   COMPILE_SKIPPED,
-   COMPILED_NO_OPTS
+   COMPILE_SKIPPED
 };
 
 /**
@@ -3506,6 +3505,7 @@ struct gl_framebuffer
    bool _HasAttachments;
 
    GLbitfield _IntegerBuffers;  /**< Which color buffers are integer valued */
+   GLbitfield _RGBBuffers;  /**< Which color buffers have baseformat == RGB */
 
    /* ARB_color_buffer_float */
    GLboolean _AllColorBuffersFixedPoint; /* no integer, no float */
@@ -4265,6 +4265,7 @@ struct gl_extensions
    GLboolean EXT_semaphore_fd;
    GLboolean EXT_shader_integer_mix;
    GLboolean EXT_shader_samples_identical;
+   GLboolean EXT_sRGB;
    GLboolean EXT_stencil_two_side;
    GLboolean EXT_texture_array;
    GLboolean EXT_texture_compression_latc;
