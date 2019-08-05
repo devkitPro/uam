@@ -2559,24 +2559,25 @@ NVC0LoweringPass::handleLDST(Instruction *i)
             // Clamp the UBO index when an indirect access is used to avoid
             // loading information from the wrong place in the driver cb.
             // TODO - synchronize the max with the driver.
-            ind = bld.mkOp2v(OP_MIN, TYPE_U32, bld.getSSA(),
-                             bld.mkOp2v(OP_ADD, TYPE_U32, bld.getSSA(),
-                                        ind, bld.loadImm(NULL, fileIndex)),
-                             bld.loadImm(NULL, 13));
+            // fincs-edit: Removed max(13,ind+fileIndex) safety check
+            ind = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getSSA(), ind, bld.loadImm(NULL, fileIndex));
             fileIndex = 0;
          }
 
-         Value *offset = bld.loadImm(NULL, i->getSrc(0)->reg.data.offset + typeSizeof(i->sType));
+         //Value *offset = bld.loadImm(NULL, i->getSrc(0)->reg.data.offset + typeSizeof(i->sType)); // fincs-edit: Bound check disabled
          Value *ptr = loadUboInfo64(ind, fileIndex * 16);
+         /* fincs-edit: Bound check disabled
          Value *length = loadUboLength32(ind, fileIndex * 16);
          Value *pred = new_LValue(func, FILE_PREDICATE);
+         */
          if (i->src(0).isIndirect(0)) {
             bld.mkOp2(OP_ADD, TYPE_U64, ptr, ptr, i->getIndirect(0, 0));
-            bld.mkOp2(OP_ADD, TYPE_U32, offset, offset, i->getIndirect(0, 0));
+            //bld.mkOp2(OP_ADD, TYPE_U32, offset, offset, i->getIndirect(0, 0)); // fincs-edit: Bound check disabled
          }
          i->getSrc(0)->reg.file = FILE_MEMORY_GLOBAL;
          i->setIndirect(0, 1, NULL);
          i->setIndirect(0, 0, ptr);
+         /* fincs-edit: Bound check disabled
          bld.mkCmp(OP_SET, CC_GT, TYPE_U32, pred, TYPE_U32, offset, length);
          i->setPredicate(CC_NOT_P, pred);
          Value *zero, *dst = i->getDef(0);
@@ -2586,6 +2587,7 @@ NVC0LoweringPass::handleLDST(Instruction *i)
          bld.mkMov((zero = bld.getSSA()), bld.mkImm(0))
             ->setPredicate(CC_P, pred);
          bld.mkOp2(OP_UNION, TYPE_U32, dst, i->getDef(0), zero);
+         */
       } else if (i->src(0).isIndirect(1)) {
          Value *ptr;
          if (i->src(0).isIndirect(0))
@@ -2608,16 +2610,19 @@ NVC0LoweringPass::handleLDST(Instruction *i)
       // XXX come up with a way not to do this for EVERY little access but
       // rather to batch these up somehow. Unfortunately we've lost the
       // information about the field width by the time we get here.
+      /* fincs-edit: bound check disabled
       Value *offset = bld.loadImm(NULL, i->getSrc(0)->reg.data.offset + typeSizeof(i->sType));
       Value *length = loadBufLength32(ind, i->getSrc(0)->reg.fileIndex * 16);
       Value *pred = new_LValue(func, FILE_PREDICATE);
+      */
       if (i->src(0).isIndirect(0)) {
          bld.mkOp2(OP_ADD, TYPE_U64, ptr, ptr, i->getIndirect(0, 0));
-         bld.mkOp2(OP_ADD, TYPE_U32, offset, offset, i->getIndirect(0, 0));
+         //bld.mkOp2(OP_ADD, TYPE_U32, offset, offset, i->getIndirect(0, 0)); // fincs-edit: bound check disabled
       }
       i->setIndirect(0, 1, NULL);
       i->setIndirect(0, 0, ptr);
       i->getSrc(0)->reg.file = FILE_MEMORY_GLOBAL;
+      /* fincs-edit: bound check disabled
       bld.mkCmp(OP_SET, CC_GT, TYPE_U32, pred, TYPE_U32, offset, length);
       i->setPredicate(CC_NOT_P, pred);
       if (i->defExists(0)) {
@@ -2629,6 +2634,7 @@ NVC0LoweringPass::handleLDST(Instruction *i)
             ->setPredicate(CC_P, pred);
          bld.mkOp2(OP_UNION, TYPE_U32, dst, i->getDef(0), zero);
       }
+      */
    }
 }
 
