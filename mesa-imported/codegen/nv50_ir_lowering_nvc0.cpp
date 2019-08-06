@@ -1896,11 +1896,15 @@ NVC0LoweringPass::adjustCoordinatesMS(TexInstruction *tex)
    bld.mkOp2(OP_SHL, TYPE_U32, tx, x, ms_x);
    bld.mkOp2(OP_SHL, TYPE_U32, ty, y, ms_y);
 
-   s = bld.mkOp2v(OP_AND, TYPE_U32, ts, s, bld.loadImm(NULL, 0x7));
-   s = bld.mkOp2v(OP_SHL, TYPE_U32, ts, ts, bld.mkImm(3));
-
-   Value *dx = loadMsInfo32(ts, 0x0);
-   Value *dy = loadMsInfo32(ts, 0x4);
+   // fincs-edit block start: Replaced LUT in driver constbuf with optimizer-friendly bitwise magic
+   Value *table, *dx, *dy;
+   table = bld.mkOp1v(OP_MOV, TYPE_U32, bld.getSSA(), bld.mkImm(0x5050EE44));
+   ts = bld.mkOp2v(OP_AND, TYPE_U32, ts, s, bld.mkImm(7));
+   dx = bld.mkOp3v(OP_SHLADD, TYPE_U32, bld.getSSA(), ts, bld.mkImm(1), bld.mkImm((2<<8)));
+   dy = bld.mkOp3v(OP_SHLADD, TYPE_U32, bld.getSSA(), ts, bld.mkImm(1), bld.mkImm((2<<8)+16));
+   dx = bld.mkOp2v(OP_EXTBF, TYPE_U32, dx, table, dx);
+   dy = bld.mkOp2v(OP_EXTBF, TYPE_U32, dy, table, dy);
+   // fincs-edit block end
 
    bld.mkOp2(OP_ADD, TYPE_U32, tx, tx, dx);
    bld.mkOp2(OP_ADD, TYPE_U32, ty, ty, dy);
