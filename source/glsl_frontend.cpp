@@ -519,6 +519,17 @@ const tgsi_token* glsl_program_get_tokens(glsl_program prg, unsigned int& num_to
 	return prog->tgsi_tokens;
 }
 
+unsigned glsl_program_compute_get_shared_size(glsl_program prg)
+{
+	struct gl_linked_shader *linked_shader = NULL;
+	for (int i = 0; !linked_shader && i < MESA_SHADER_STAGES; i ++)
+		linked_shader = prg->_LinkedShaders[i];
+	if (!linked_shader)
+		return 0;
+
+	return linked_shader->Program->info.cs.shared_size;
+}
+
 void glsl_program_free(glsl_program prg)
 {
 	for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
