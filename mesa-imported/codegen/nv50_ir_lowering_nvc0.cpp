@@ -2689,6 +2689,7 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
          i->op = OP_MOV;
          i->setSrc(0, bld.mkImm((sv == SV_NTID || sv == SV_NCTAID) ? 1 : 0));
       } else
+      /* fincs-edit: NVC0+ has separate SR_TID.x/y/z regs. I don't know why this section is a thing at all.
       if (sv == SV_TID) {
          // Help CSE combine TID fetches
          Value *tid = bld.mkOp1v(OP_RDSV, TYPE_U32, bld.getScratch(),
@@ -2701,6 +2702,7 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
          case 2: i->setSrc(1, bld.mkImm(0x061a)); break;
          }
       }
+      */
       if (sv == SV_VERTEX_COUNT) {
          bld.setPosition(i, true);
          bld.mkOp2(OP_EXTBF, TYPE_U32, i->getDef(0), i->getDef(0), bld.mkImm(0x808));
