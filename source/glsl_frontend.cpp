@@ -441,6 +441,17 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 			goto _fail;
 		}
 
+		// Force OriginUpperLeft
+		if (linked_shader->Program->OriginUpperLeft)
+			fprintf(stderr, "warning: origin_upper_left has no effect\n");
+		linked_shader->Program->OriginUpperLeft = GL_TRUE;
+
+		// Check for PixelCenterInteger (unsupported)
+		if (linked_shader->Program->PixelCenterInteger == GL_TRUE) {
+			fprintf(stderr, "error: pixel_center_integer is not supported\n");
+			goto _fail;
+		}
+
 		// TGSI generation
 		bool rc = false;
 		switch (stage)

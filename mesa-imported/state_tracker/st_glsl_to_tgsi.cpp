@@ -6858,8 +6858,10 @@ st_translate_program(
 
       if (proginfo->info.inputs_read & VARYING_BIT_POS) {
           /* Must do this after setting up t->inputs. */
+          /* fincs-edit: Non-native gl_FragCoord modes are not supported.
           emit_wpos(ctx, t, proginfo, ureg, // fincs-edit
                     program->wpos_transform_const);
+          */
       }
 
       if (proginfo->info.inputs_read & VARYING_BIT_FACE)
@@ -6957,6 +6959,7 @@ st_translate_program(
                }
             }
 
+            /* fincs-edit: Non-native gl_FragCoord modes are not supported.
             if (procType == PIPE_SHADER_FRAGMENT &&
                 semName == TGSI_SEMANTIC_POSITION)
                emit_wpos(ctx, t, proginfo, ureg, // fincs-edit
@@ -6965,6 +6968,7 @@ st_translate_program(
             if (procType == PIPE_SHADER_FRAGMENT &&
                 semName == TGSI_SEMANTIC_SAMPLEPOS)
                emit_samplepos_adjustment(t, program->wpos_transform_const);
+            */
 
             sysInputs &= ~(1ull << i);
          }
@@ -7279,6 +7283,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    shader->ir = NULL;
 
    /* This must be done before the uniform storage is associated. */
+   /* fincs-edit: Non-native gl_FragCoord modes are not supported.
    if (shader->Stage == MESA_SHADER_FRAGMENT &&
        (prog->info.inputs_read & VARYING_BIT_POS ||
         prog->info.system_values_read & (1ull << SYSTEM_VALUE_FRAG_COORD) ||
@@ -7290,6 +7295,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
       v->wpos_transform_const = _mesa_add_state_reference(prog->Parameters,
                                                           wposTransformState);
    }
+   */
 
    /* Avoid reallocation of the program parameter list, because the uniform
     * storage is only associated with the original parameter list.
