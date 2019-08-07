@@ -1759,10 +1759,10 @@ NVC0LoweringPass::loadSuInfo32(Value *ptr, int slot, uint32_t off, bool bindless
 Value *
 NVC0LoweringPass::loadMsAdjInfo32(TexInstruction::Target target, uint32_t index, int slot, Value *ind, bool bindless)
 {
-   if (!bindless || targ->getChipset() < NVISA_GM107_CHIPSET)
+   if (/*!bindless ||*/ targ->getChipset() < NVISA_GM107_CHIPSET) // fincs-edit
       return loadSuInfo32(ind, slot, NVC0_SU_INFO_MS(index), bindless);
 
-   assert(bindless);
+   //assert(bindless); // fincs-edit
 
    Value *samples = bld.getSSA();
    // this shouldn't be lowered because it's being inserted before the current instruction
@@ -1770,11 +1770,11 @@ NVC0LoweringPass::loadMsAdjInfo32(TexInstruction::Target target, uint32_t index,
    tex->tex.target = target;
    tex->tex.query = TXQ_TYPE;
    tex->tex.mask = 0x4;
-   tex->tex.r = 0xff;
+   tex->tex.r = bindless ? 0xff : (prog->driver->io.texBindBase/4 + slot + 32); // fincs-edit
    tex->tex.s = 0x1f;
-   tex->tex.rIndirectSrc = 0;
+   tex->tex.rIndirectSrc = bindless ? 0 : -1; // fincs-edit
    tex->setDef(0, samples);
-   tex->setSrc(0, ind);
+   tex->setSrc(0, bindless ? ind : bld.loadImm(NULL, 0)); // fincs-edit
    tex->setSrc(1, bld.loadImm(NULL, 0));
    bld.insert(tex);
 
@@ -1880,18 +1880,8 @@ NVC0LoweringPass::adjustCoordinatesMS(TexInstruction *tex)
    Value *tx = bld.getSSA(), *ty = bld.getSSA(), *ts = bld.getSSA();
    Value *ind = tex->getIndirectR();
 
-   // fincs-edit block start
-   Value *handle = ind;
-   bool load_bindless = tex->tex.bindless;
-   if (targ->getChipset() >= NVISA_GM107_CHIPSET) {
-      // Prefer bindless access as opposed to loading information from driver UBO
-      handle = loadTexHandle(ind, slot + 32);
-      load_bindless = true;
-   }
-
-   Value *ms_x = loadMsAdjInfo32(tex->tex.target, 0, slot, handle, load_bindless);
-   Value *ms_y = loadMsAdjInfo32(tex->tex.target, 1, slot, handle, load_bindless);
-   // fincs-edit block end
+   Value *ms_x = loadMsAdjInfo32(tex->tex.target, 0, slot, ind, tex->tex.bindless);
+   Value *ms_y = loadMsAdjInfo32(tex->tex.target, 1, slot, ind, tex->tex.bindless);
 
    bld.mkOp2(OP_SHL, TYPE_U32, tx, x, ms_x);
    bld.mkOp2(OP_SHL, TYPE_U32, ty, y, ms_y);
@@ -2445,7 +2435,7 @@ NVC0LoweringPass::processSurfaceCoordsGM107(TexInstruction *su)
    if (su->tex.bindless)
       handle = ind;
    else
-      handle = loadTexHandle(ind, slot + 32);
+      handle = bld.mkImm(prog->driver->io.texBindBase/4 + slot + 32); // fincs-edit
    su->setSrc(arg + pos, handle);
 
 #if 0 // fincs-edit: Removing access checks for bound textures too.
