@@ -61,6 +61,7 @@ private:
    virtual bool visit(Function *);
 
    // we want to insert calls to the builtin library only after optimization
+   void emulateIDIVMOD(DataType dt, Value *dst, Value *src0, Value *src1, bool negate); // fincs-edit
    void handleDIV(Instruction *); // integer division, modulus
    void handleRCPRSQLib(Instruction *, Value *[]);
    void handleRCPRSQ(Instruction *); // double precision float recip/rsqrt

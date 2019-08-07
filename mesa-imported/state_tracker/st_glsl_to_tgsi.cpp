@@ -7506,7 +7506,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                          BORROW_TO_ARITH |
                          (have_dround ? 0 : DOPS_TO_DFRAC) |
                          (options->EmitNoPow ? POW_TO_EXP2 : 0) |
-                         (/*!ctx->Const.NativeIntegers*/ true ? INT_DIV_TO_MUL_RCP : 0) | // fincs-edit
+                         (!ctx->Const.NativeIntegers ? INT_DIV_TO_MUL_RCP : 0) |
                          (options->EmitNoSat ? SAT_TO_CLAMP : 0) |
                          (ctx->Const.ForceGLSLAbsSqrt ? SQRT_TO_ABS_SQRT : 0) |
                          /* Assume that if ARB_gpu_shader5 is not supported

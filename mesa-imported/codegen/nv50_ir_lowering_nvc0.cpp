@@ -40,9 +40,31 @@ namespace nv50_ir {
    ((QOP_##q << 6) | (QOP_##r << 4) |           \
     (QOP_##s << 2) | (QOP_##t << 0))
 
+// fincs-edit: Emulate integer division by using higher-precision float (instead of using the support lib)
+void
+NVC0LegalizeSSA::emulateIDIVMOD(DataType dt, Value *dst, Value *src0, Value *src1, bool negate)
+{
+   // Originally it was intended to use F64 for U32/S32 divmod, however the hardware only supports
+   // RCP on the topmost 32-bit word of a F64 value, therefore using a 1.11.20 format. This has
+   // less mantissa bits than standard F32 (1.8.23), so F32 is preferable after all.
+   //DataType flttype = typeSizeof(dt) >= 4 ? TYPE_F64 : TYPE_F32;
+   DataType flttype = TYPE_F32;
+   unsigned fltsize = typeSizeof(flttype);
+   LValue *tmp0 = bld.getScratch(fltsize), *tmp1 = bld.getScratch(fltsize);
+   bld.mkCvt(OP_CVT, flttype, tmp0, dt, src0);
+   bld.mkCvt(OP_CVT, flttype, tmp1, dt, src1);
+   bld.mkOp1(OP_RCP, flttype, tmp1, tmp1);
+   bld.mkOp2(OP_MUL, flttype, tmp0, tmp0, tmp1);
+   if (!negate)
+      bld.mkCvt(OP_TRUNC, dt, dst, flttype, tmp0);
+   else
+      bld.mkCvt(OP_TRUNC, intTypeToSigned(dt), dst, flttype, tmp0)->src(0).mod = NV50_IR_MOD_NEG;
+}
+
 void
 NVC0LegalizeSSA::handleDIV(Instruction *i)
 {
+#if 0 // fincs-edit: Using emulated codepath instead of library function
    FlowInstruction *call;
    int builtin;
 
@@ -80,6 +102,22 @@ NVC0LegalizeSSA::handleDIV(Instruction *i)
    call->fixed = 1;
    call->absolute = call->builtin = 1;
    call->target.builtin = builtin;
+   delete_Instruction(prog, i);
+#endif
+
+   bld.setPosition(i, false);
+   switch (i->op) {
+   default:
+   case OP_DIV:
+      emulateIDIVMOD(i->dType, i->getDef(0), i->getSrc(0), i->getSrc(1), false);
+      break;
+   case OP_MOD: {
+      LValue *tmp = bld.getSSA(typeSizeof(i->dType));
+      emulateIDIVMOD(i->dType, tmp, i->getSrc(0), i->getSrc(1), true);
+      bld.mkOp3(OP_FMA, i->dType, i->getDef(0), tmp, i->getSrc(1), i->getSrc(0));
+      break;
+   }
+   }
    delete_Instruction(prog, i);
 }
 
