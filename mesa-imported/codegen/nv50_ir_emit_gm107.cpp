@@ -314,7 +314,7 @@ CodeEmitterGM107::emitCBUF(int buf, int gpr, int off, int len, int shr,
 
    assert(!(s->reg.data.offset & ((1 << shr) - 1)));
 
-   emitField(buf,  5, v->reg.fileIndex);
+   emitField(buf,  5, (v->reg.fileIndex + 1) % 18); // fincs-edit: Shuffle cbufs around
    if (gpr >= 0)
       emitGPR(gpr, ref.getIndirect(0));
    emitField(off, 16, s->reg.data.offset >> shr);

@@ -320,8 +320,8 @@ int main(int argc, char* argv[])
 
 	info.bin.smemSize      = glsl_program_compute_get_shared_size(prg); // Total size of glsl shared variables. (translation process doesn't need this, but for the sake of consistency with nouveau, we keep this value here too)
 	//info.io.genUserClip  = prog->vp.num_ucps;  // This is used for old-style clip plane handling (gl_ClipVertex). (we don't need this)
-	info.io.auxCBSlot      = 15;
-	//info.io.msInfoCBSlot = 15;                                    // This is used for msInfoBase (which is unused, see below)
+	info.io.auxCBSlot      = 17;                                    // Driver constbuf (c[0x0]). Note that codegen was modified to transform constbuf ids like such: final_id = (raw_id + 1) % 18
+	//info.io.msInfoCBSlot = 17;                                    // This is used for msInfoBase (which is unused, see below)
 	//info.io.ucpBase      = 0x120; //NVC0_CB_AUX_UCP_INFO;         // This is also for old-style clip plane handling. (we don't need this)
 	info.io.drawInfoBase   = 0x1a0; //NVC0_CB_AUX_DRAW_INFO;        // This is used for gl_BaseVertex, gl_BaseInstance and gl_DrawID (in that order)
 	//info.io.msInfoBase   = 0x0c0; //NVC0_CB_AUX_MS_INFO;          // This points to a LUT used to calculate dx/dy from the sample id in NVC0LoweringPass::adjustCoordinatesMS. I replaced it with bitwise operations, so this is now unused.
@@ -331,13 +331,8 @@ int main(int argc, char* argv[])
 	info.io.fbtexBindBase  = 0x100; //NVC0_CB_AUX_FB_TEX_INFO;      // This is used for implementing TGSI_OPCODE_FBFETCH, itself used for KHR/NV_blend_equation_advanced and EXT_shader_framebuffer_fetch.
 	//info.io.bindlessBase = 0x6b0; //NVC0_CB_AUX_BINDLESS_INFO(0); // Like suInfoBase, but for bindless textures. Also unused in our case.
 	info.io.sampleInfoBase = 0x1a0; //NVC0_CB_AUX_SAMPLE_INFO;      // This is a LUT needed to implement gl_SamplePosition, it contains MSAA base sample positions.
-	if (stage == pipeline_stage_compute)
-	{
-		info.io.auxCBSlot = 7;
-		//info.io.msInfoCBSlot = 7;
-		info.io.uboInfoBase = 0x120;       //NVC0_CB_AUX_UBO_INFO(0);  // This is like bufInfoBase, but for UBOs. Compute shaders need this because there aren't enough hardware constbufs. (we of course do not support the GL limit so this is useless)
-		//info.prop.cp.gridInfoBase = 0x100; //NVC0_CB_AUX_GRID_INFO(0); // This is the work_dim parameter from clEnqueueNDRangeKernel (OpenCL). (we don't need this)
-	}
+	info.io.uboInfoBase    = 0x120; //NVC0_CB_AUX_UBO_INFO(0);      // This is like bufInfoBase, but for UBOs. Compute shaders need this because there aren't enough hardware constbufs. (we of course do not support the GL limit so this is useless)
+	//info.prop.cp.gridInfoBase = 0x100; //NVC0_CB_AUX_GRID_INFO(0); // This is the work_dim parameter from clEnqueueNDRangeKernel (OpenCL). (we don't need this)
 
 	info.assignSlots = nvc0_program_assign_varying_slots;
 
