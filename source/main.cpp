@@ -290,26 +290,33 @@ int main(int argc, char* argv[])
 	}
 
 	struct nv50_ir_prog_info info = {0};
+	uint16_t resbase;
 	switch (stage)
 	{
 		default:
 		case pipeline_stage_vertex:
 			info.type = PIPE_SHADER_VERTEX;
+			resbase = 0x010;
 			break;
 		case pipeline_stage_tess_ctrl:
 			info.type = PIPE_SHADER_TESS_CTRL;
+			resbase = 0x1b0;
 			break;
 		case pipeline_stage_tess_eval:
 			info.type = PIPE_SHADER_TESS_EVAL;
+			resbase = 0x350;
 			break;
 		case pipeline_stage_geometry:
 			info.type = PIPE_SHADER_GEOMETRY;
+			resbase = 0x4f0;
 			break;
 		case pipeline_stage_fragment:
 			info.type = PIPE_SHADER_FRAGMENT;
+			resbase = 0x690;
 			break;
 		case pipeline_stage_compute:
 			info.type = PIPE_SHADER_COMPUTE;
+			resbase = 0x080;
 			break;
 	}
 	info.target = 0x12b;
@@ -318,21 +325,23 @@ int main(int argc, char* argv[])
 
 	info.optLevel = 3;
 
-	info.bin.smemSize      = glsl_program_compute_get_shared_size(prg); // Total size of glsl shared variables. (translation process doesn't need this, but for the sake of consistency with nouveau, we keep this value here too)
-	//info.io.genUserClip  = prog->vp.num_ucps;  // This is used for old-style clip plane handling (gl_ClipVertex). (we don't need this)
-	info.io.auxCBSlot      = 17;                                    // Driver constbuf (c[0x0]). Note that codegen was modified to transform constbuf ids like such: final_id = (raw_id + 1) % 18
-	//info.io.msInfoCBSlot = 17;                                    // This is used for msInfoBase (which is unused, see below)
-	//info.io.ucpBase      = 0x120; //NVC0_CB_AUX_UCP_INFO;         // This is also for old-style clip plane handling. (we don't need this)
-	info.io.drawInfoBase   = 0x1a0; //NVC0_CB_AUX_DRAW_INFO;        // This is used for gl_BaseVertex, gl_BaseInstance and gl_DrawID (in that order)
-	//info.io.msInfoBase   = 0x0c0; //NVC0_CB_AUX_MS_INFO;          // This points to a LUT used to calculate dx/dy from the sample id in NVC0LoweringPass::adjustCoordinatesMS. I replaced it with bitwise operations, so this is now unused.
-	info.io.bufInfoBase    = 0x2a0; //NVC0_CB_AUX_BUF_INFO(0);      // This is used to load SSBO information (u64 iova / u32 size / u32 padding)
-	//info.io.suInfoBase   = 0x4a0; //NVC0_CB_AUX_SU_INFO(0);       // Surface information. On Maxwell, nouveau only uses it during NVC0LoweringPass::processSurfaceCoordsGM107 bound checking (which I disabled so this is now fully unused)
-	info.io.texBindBase    = 0x020; //NVC0_CB_AUX_TEX_INFO(0);      // Start of bound texture handles (32) + images (right after). 32-bit instead of 64-bit.
-	info.io.fbtexBindBase  = 0x100; //NVC0_CB_AUX_FB_TEX_INFO;      // This is used for implementing TGSI_OPCODE_FBFETCH, itself used for KHR/NV_blend_equation_advanced and EXT_shader_framebuffer_fetch.
-	//info.io.bindlessBase = 0x6b0; //NVC0_CB_AUX_BINDLESS_INFO(0); // Like suInfoBase, but for bindless textures. Also unused in our case.
-	info.io.sampleInfoBase = 0x1a0; //NVC0_CB_AUX_SAMPLE_INFO;      // This is a LUT needed to implement gl_SamplePosition, it contains MSAA base sample positions.
-	info.io.uboInfoBase    = 0x120; //NVC0_CB_AUX_UBO_INFO(0);      // This is like bufInfoBase, but for UBOs. Compute shaders need this because there aren't enough hardware constbufs. (we of course do not support the GL limit so this is useless)
-	//info.prop.cp.gridInfoBase = 0x100; //NVC0_CB_AUX_GRID_INFO(0); // This is the work_dim parameter from clEnqueueNDRangeKernel (OpenCL). (we don't need this)
+	info.bin.smemSize      = glsl_program_compute_get_shared_size(prg); // Total size of glsl shared variables. (translation process doesn't actually need this, but for the sake of consistency with nouveau, we keep this value here too)
+	info.io.auxCBSlot      = 17;            // Driver constbuf c[0x0]. Note that codegen was modified to transform constbuf ids like such: final_id = (raw_id + 1) % 18
+	info.io.drawInfoBase   = 0x000;         // This is used for gl_BaseVertex, gl_BaseInstance and gl_DrawID (in that order)
+	info.io.bufInfoBase    = resbase+0x0a0; // This is used to load SSBO information (u64 iova / u32 size / u32 padding)
+	info.io.texBindBase    = resbase+0x000; // Start of bound texture handles (32) + images (right after). 32-bit instead of 64-bit.
+	info.io.fbtexBindBase  = 0x00c;         // This is used for implementing TGSI_OPCODE_FBFETCH, itself used for KHR/NV_blend_equation_advanced and EXT_shader_framebuffer_fetch.
+	info.io.sampleInfoBase = 0x830;         // This is a LUT needed to implement gl_SamplePosition, it contains MSAA base sample positions.
+	info.io.uboInfoBase    = 0x000;         // Similar to bufInfoBase, but for UBOs. Compute shaders need this because there aren't enough hardware constbufs.
+
+	// The following fields are unused in our case, but are kept here for reference's sake:
+	//info.io.genUserClip  = prog->vp.num_ucps;             // This is used for old-style clip plane handling (gl_ClipVertex).
+	//info.io.msInfoCBSlot = 17;                            // This is used for msInfoBase (which is unused, see below)
+	//info.io.ucpBase      = NVC0_CB_AUX_UCP_INFO;          // This is also for old-style clip plane handling.
+	//info.io.msInfoBase   = NVC0_CB_AUX_MS_INFO;           // This points to a LUT used to calculate dx/dy from the sample id in NVC0LoweringPass::adjustCoordinatesMS. I replaced it with bitwise operations, so this is now unused.
+	//info.io.suInfoBase   = NVC0_CB_AUX_SU_INFO(0);        // Surface information. On Maxwell, nouveau only uses it during NVC0LoweringPass::processSurfaceCoordsGM107 bound checking (which I disabled)
+	//info.io.bindlessBase = NVC0_CB_AUX_BINDLESS_INFO(0);  // Like suInfoBase, but for bindless textures (pre-Kepler?).
+	//info.prop.cp.gridInfoBase = NVC0_CB_AUX_GRID_INFO(0); // This is the work_dim parameter from clEnqueueNDRangeKernel (OpenCL).
 
 	info.assignSlots = nvc0_program_assign_varying_slots;
 
