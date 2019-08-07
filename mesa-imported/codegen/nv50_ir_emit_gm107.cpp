@@ -1855,8 +1855,8 @@ CodeEmitterGM107::emitIMAD()
 
    emitField(0x36, 1, insn->subOp == NV50_IR_SUBOP_MUL_HIGH);
    emitField(0x35, 1, isSignedType(insn->sType));
-   emitNEG  (0x34, insn->src(2));
-   emitNEG2 (0x33, insn->src(0), insn->src(1));
+   emitNEG2 (0x34, insn->src(0), insn->src(1));
+   emitNEG  (0x33, insn->src(2));
    emitSAT  (0x32);
    emitX    (0x31);
    emitField(0x30, 1, isSignedType(insn->dType));
