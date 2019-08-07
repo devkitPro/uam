@@ -1310,7 +1310,7 @@ NVC0LoweringPass::handleTXQ(TexInstruction *txq)
       txq->moveSources(0, 1);
       txq->setSrc(0, src);
    } else {
-      Value *hnd = loadTexHandle(txq->getIndirectR(), txq->tex.r);
+      Value *hnd = ticRel; // fincs-edit start: Don't use the handle as an index into the handle table...
       txq->tex.r = 0xff;
       txq->tex.s = 0x1f;
 
