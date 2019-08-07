@@ -251,7 +251,7 @@ initialize_context(struct gl_context *ctx, gl_api api)
 		pc->MaxParameters = pc->MaxNativeParameters = pc->MaxUniformComponents / 4;
 		pc->MaxInputComponents = pc->MaxAttribs*4;
 		pc->MaxOutputComponents = 32*4;
-		pc->MaxUniformBlocks = sh != PIPE_SHADER_COMPUTE ? 14 : 6; // fincs-note: this is custom - also this doesn't count driver ubos or blockless uniforms
+		pc->MaxUniformBlocks = 16; // fincs-note: this is custom - also this doesn't count driver ubos or blockless uniforms
 		pc->MaxCombinedUniformComponents = pc->MaxUniformComponents + uint64_t(ctx->Const.MaxUniformBlockSize) / 4 * pc->MaxUniformBlocks;
 		pc->MaxShaderStorageBlocks = 16; // fincs-note: this is also custom
 		pc->MaxAtomicCounters = 0; // fincs-note: we don't support atomic counters

@@ -1718,7 +1718,16 @@ NVC0LoweringPass::loadBufLength32(Value *ptr, uint32_t off)
 inline Value *
 NVC0LoweringPass::loadUboInfo64(Value *ptr, uint32_t off)
 {
-   return loadResInfo64(ptr, off, prog->driver->io.uboInfoBase);
+   // fincs-edit: This entire function was rewritten to account for the removal of the size field
+
+   uint8_t b = prog->driver->io.auxCBSlot;
+   off = prog->driver->io.uboInfoBase + off/2;
+
+   if (ptr)
+      ptr = bld.mkOp2v(OP_SHL, TYPE_U32, bld.getScratch(), ptr, bld.mkImm(3));
+
+   return bld.
+      mkLoadv(TYPE_U64, bld.mkSymbol(FILE_MEMORY_CONST, b, TYPE_U64, off), ptr);
 }
 
 inline Value *
@@ -2549,14 +2558,18 @@ NVC0LoweringPass::handleLDST(Instruction *i)
          // requires at least 12 UBOs. To bypass this limitation, for constant
          // buffers 7+, we store the addrs into the driver constbuf and we
          // directly load from the global memory.
+         /* fincs-edit: Removed this section as its only purpose is being a bounds check
          if (ind) {
             // Clamp the UBO index when an indirect access is used to avoid
             // loading information from the wrong place in the driver cb.
             // TODO - synchronize the max with the driver.
-            // fincs-edit: Removed max(13,ind+fileIndex) safety check
-            ind = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getSSA(), ind, bld.loadImm(NULL, fileIndex));
+            ind = bld.mkOp2v(OP_MIN, TYPE_U32, bld.getSSA(),
+                             bld.mkOp2v(OP_ADD, TYPE_U32, bld.getSSA(),
+                                        ind, bld.loadImm(NULL, fileIndex)),
+                             bld.loadImm(NULL, 13));
             fileIndex = 0;
          }
+         */
 
          //Value *offset = bld.loadImm(NULL, i->getSrc(0)->reg.data.offset + typeSizeof(i->sType)); // fincs-edit: Bound check disabled
          Value *ptr = loadUboInfo64(ind, fileIndex * 16);
