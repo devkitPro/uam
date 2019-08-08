@@ -1632,6 +1632,7 @@ NVC0LoweringPass::handleATOM(Instruction *atom)
       atom->setIndirect(0, 0, base);
       atom->getSrc(0)->reg.file = FILE_MEMORY_GLOBAL;
 
+#if 0 // fincs-edit: Bound check disabled
       // Harden against out-of-bounds accesses
       Value *offset = bld.loadImm(NULL, atom->getSrc(0)->reg.data.offset + typeSizeof(atom->sType));
       Value *length = loadBufLength32(ind, atom->getSrc(0)->reg.fileIndex * 16);
@@ -1649,6 +1650,7 @@ NVC0LoweringPass::handleATOM(Instruction *atom)
             ->setPredicate(CC_P, pred);
          bld.mkOp2(OP_UNION, TYPE_U32, dst, atom->getDef(0), zero);
       }
+#endif
 
       return true;
    }
