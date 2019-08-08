@@ -750,7 +750,7 @@ lower_ubo_reference_visitor::process_ssbo_unsized_array_length(ir_rvalue **rvalu
    enum glsl_interface_packing packing =
       var->get_interface_type()->
          get_internal_ifc_packing(use_std430_as_default);
-   int unsized_array_stride =
+   unsigned unsized_array_stride = // fincs-edit
       calculate_unsized_array_stride(deref, packing);
 
    this->buffer_access_type = ssbo_unsized_array_length_access;
@@ -776,13 +776,14 @@ lower_ubo_reference_visitor::process_ssbo_unsized_array_length(ir_rvalue **rvalu
 
    ir_expression *sub = new(mem_ctx)
       ir_expression(ir_binop_sub, buffer_size, offset_of_array_int);
+   ir_expression *sub_clamped = new(mem_ctx) // fincs-edit
+      ir_expression(ir_unop_i2u, new(mem_ctx) // fincs-edit
+         ir_expression(ir_binop_max, sub, new(mem_ctx) ir_constant(0))); // fincs-edit
    ir_expression *div =  new(mem_ctx)
-      ir_expression(ir_binop_div, sub,
+      ir_expression(ir_binop_div, sub_clamped, // fincs-edit
                     new(mem_ctx) ir_constant(unsized_array_stride));
-   ir_expression *max = new(mem_ctx)
-      ir_expression(ir_binop_max, div, new(mem_ctx) ir_constant(0));
 
-   return max;
+   return div; // fincs-edit
 }
 
 void
