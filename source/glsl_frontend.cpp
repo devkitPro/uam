@@ -179,7 +179,7 @@ initialize_context(struct gl_context *ctx, gl_api api)
 	ctx->Const.MaxPatchVertices = MAX_PATCH_VERTICES;
 
 	// Adapted from st_init_extensions
-	ctx->Const.GLSLVersion = 450;
+	ctx->Const.GLSLVersion = 460;
 	ctx->Const.NativeIntegers = GL_TRUE;
 	ctx->Const.MaxClipPlanes = 8;
 	ctx->Const.UniformBooleanTrue = ~0U;
@@ -199,7 +199,7 @@ initialize_context(struct gl_context *ctx, gl_api api)
 	ctx->Const.ViewportBounds.Min = -32768.0;
 	ctx->Const.ViewportBounds.Max = 32767.0;
 	ctx->Const.MaxComputeWorkGroupInvocations = 1024;
-	ctx->Const.MaxComputeSharedMemorySize = 96 << 10;
+	ctx->Const.MaxComputeSharedMemorySize = 64 << 10;
 	ctx->Const.MaxComputeWorkGroupCount[0] = 0x7fffffff;
 	ctx->Const.MaxComputeWorkGroupCount[1] = 65535;
 	ctx->Const.MaxComputeWorkGroupCount[2] = 65535;

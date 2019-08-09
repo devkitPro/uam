@@ -286,6 +286,9 @@ void initialize_context_to_defaults(struct gl_context *ctx, gl_api api)
    ctx->Extensions.ARB_shader_storage_buffer_object = GL_TRUE;
    ctx->Extensions.ARB_shader_image_load_store = GL_TRUE;
    ctx->Extensions.ARB_shader_image_size = GL_TRUE;
+   ctx->Extensions.ARB_shader_group_vote = GL_TRUE;
+   ctx->Extensions.ARB_shader_ballot = GL_TRUE;
+   ctx->Extensions.ARB_shader_atomic_counter_ops = GL_TRUE;
 
    // Compute
    ctx->Extensions.ARB_compute_shader = GL_TRUE;
