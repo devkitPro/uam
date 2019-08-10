@@ -3492,8 +3492,15 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       break;
    case TGSI_OPCODE_BALLOT:
       if (!tgsi.getDst(0).isMasked(0)) {
-         val0 = new_LValue(func, FILE_PREDICATE);
-         mkCmp(OP_SET, CC_NE, TYPE_U32, val0, TYPE_U32, fetchSrc(0, 0), zero);
+         // fincs-edit start: Help codegen by detecting if the source operand is an immediate,
+         // and convert that directly to PT or ~PT in OP_VOTE instead of going through OP_SET.
+         if (tgsi.getSrc(0).getFile() == TGSI_FILE_IMMEDIATE) {
+            val0 = mkImm(info->immd.data[tgsi.getSrc(0).getIndex(0)*4 + tgsi.getSrc(0).getSwizzle(0)] != 0);
+         } else {
+            val0 = new_LValue(func, FILE_PREDICATE);
+            mkCmp(OP_SET, CC_NE, TYPE_U32, val0, TYPE_U32, fetchSrc(0,0), zero);
+         }
+         // fincs-edit end
          mkOp1(op, TYPE_U32, dst0[0], val0)->subOp = NV50_IR_SUBOP_VOTE_ANY;
       }
       if (!tgsi.getDst(0).isMasked(1))
