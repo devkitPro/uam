@@ -185,10 +185,115 @@ TargetGM107::isBarrierRequired(const Instruction *insn) const
    return false;
 }
 
+enum DualIssueClass
+{
+   ALU,
+   FLOW,
+   MEM,
+   SFU,
+   OTHER,
+   UNK
+};
+
+static enum DualIssueClass
+getDualIssueClass(const Instruction *insn)
+{
+   switch (insn->op) {
+   case OP_ADD:
+   case OP_AND:
+   case OP_FMA:
+   case OP_MAD:
+   case OP_MAX:
+   case OP_MIN:
+   case OP_MOV:
+   case OP_MUL:
+   case OP_NOT:
+   case OP_OR:
+   case OP_PREEX2:
+   case OP_PRESIN:
+   case OP_SET:
+   case OP_SLCT:
+   case OP_SUB:
+   case OP_XOR:
+      return ALU;
+   case OP_BRA:
+   case OP_EXIT:
+   case OP_BREAK:
+   case OP_JOIN:
+   case OP_JOINAT:
+   case OP_PREBREAK:
+      return FLOW;
+   case OP_ABS:
+   case OP_CEIL:
+   case OP_COS:
+   case OP_EX2:
+   case OP_FLOOR:
+   case OP_LG2:
+   case OP_NEG:
+   case OP_RCP:
+   case OP_RSQ:
+   case OP_SAT:
+   case OP_SIN:
+   case OP_SQRT:
+   case OP_TRUNC:
+      return SFU;
+   case OP_LINTERP:
+   case OP_LOAD:
+   case OP_PINTERP:
+   case OP_STORE:
+   case OP_TEX:
+      return MEM;
+
+   /* converts to predicates are special */
+   case OP_CVT:
+      if (insn->getSrc(0)->inFile(FILE_GPR) && insn->getDef(0)->inFile(FILE_GPR))
+         return SFU;
+      return OTHER;
+
+   /* not verified */
+   default:
+      return UNK;
+   }
+}
+
 bool
 TargetGM107::canDualIssue(const Instruction *a, const Instruction *b) const
 {
-   // TODO
+   if (!a->canCommuteDefDef(b) || !a->canCommuteDefSrc(b))
+      return false;
+
+   DualIssueClass ac = getDualIssueClass(a);
+   DualIssueClass bc = getDualIssueClass(b);
+
+   if (ac == UNK || bc == UNK) {
+/*      printf("please check:\n");
+      a->print();
+      b->print();
+      printf("\n");*/
+      return false;
+   }
+
+   if (ac == OTHER || bc == OTHER)
+      return false;
+
+   if (ac == bc)
+      return false;
+
+   /* maxas suggest we can't dual issue if both load immediates */
+   bool hasImm = false;
+
+   for (int i = 0; a->srcExists(i); ++i)
+      if (a->getSrc(i)->inFile(FILE_IMMEDIATE))
+         hasImm = true;
+
+   if (hasImm)
+      for (int i = 0; b->srcExists(i); ++i)
+         if (b->getSrc(i)->inFile(FILE_IMMEDIATE))
+            return false;
+
+   if (ac == ALU)
+      return true;
+
    return false;
 }
 
