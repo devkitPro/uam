@@ -364,29 +364,43 @@ int main(int argc, char* argv[])
 		printf("\n");
 	*/
 
+	uint32_t numInsns = info.bin.codeSize/8;
+	uint64_t* insns = (uint64_t*)info.bin.code;
+	uint32_t totalNumInsns = (numInsns + 8) &~ 7;
+	uint32_t numPaddingInsns = totalNumInsns - numInsns;
+	//printf("numInsns:        %u\n", numInsns);
+	//printf("numPaddingInsns: %u\n", numPaddingInsns);
+	//printf("totalNumInsns:   %u\n", totalNumInsns);
+
+	bool emittedBRA = false;
+	for (uint32_t i = numInsns; i < totalNumInsns; i ++)
+	{
+		uint64_t& schedInsn = insns[i &~ 3];
+		uint32_t ipos = i & 3;
+		//printf("cur %u, ipos %u\n", i, ipos);
+		if (ipos == 0)
+		{
+			schedInsn = 0;
+			continue;
+		}
+		uint64_t insn = UINT64_C(0x50b0000000070f00); // NOP
+		uint32_t sched = 0x7e0;
+		if (!emittedBRA)
+		{
+			emittedBRA = true;
+			insn = ipos==1 ? UINT64_C(0xe2400fffff07000f) : UINT64_C(0xe2400fffff87000f); // BRA $;
+			sched = 0x7ff;
+		}
+
+		insns[i] = insn;
+		schedInsn &= ~(((UINT64_C(1)<<21)-1) << (21*(ipos-1)));
+		schedInsn |= uint64_t(sched) << (21*(ipos-1));
+	}
+
 	FILE* f = fopen(outFile, "wb");
 	if (f)
 	{
-		fwrite(info.bin.code, 1, info.bin.codeSize, f);
-		uint32_t numThings = info.bin.codeSize/8;
-		uint32_t remaining = ((numThings+7)&~7) - numThings;
-		//bool didBra = false;
-		for (uint32_t i = 0; i < remaining; i ++)
-		{
-			uint64_t dummy = 0;
-			/* TODO: figure out why this makes nvdisasm crap its pants
-			if (!((numThings+i)&3))
-				dummy = UINT64_C(0x001f8000fc0007e0); // (sched)
-			else if (!didBra)
-			{
-				dummy = UINT64_C(0xe2400fffff87000f); // BRA $;
-				didBra = true;
-			}
-			else
-				dummy = UINT64_C(0x50b0000000070f00); // NOP;
-			*/
-			fwrite(&dummy, sizeof(uint64_t), 1, f);
-		}
+		fwrite(insns, 1, 8*totalNumInsns, f);
 		fclose(f);
 	}
 

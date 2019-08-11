@@ -380,7 +380,7 @@ Program::emitBinary(struct nv50_ir_prog_info *info)
       code = NULL;
       return false;
    }
-   code = reinterpret_cast<uint32_t *>(MALLOC(binSize));
+   code = reinterpret_cast<uint32_t *>(MALLOC((binSize + 0x40) &~ 0x3F)); // fincs-edit: Add space for up to 8 padding instructions
    if (!code)
       return false;
    emit->setCodeLocation(code, binSize);
