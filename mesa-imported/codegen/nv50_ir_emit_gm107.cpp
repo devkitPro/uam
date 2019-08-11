@@ -174,9 +174,11 @@ private:
    void emitLDC();
    void emitLDL();
    void emitLDS();
+   void emitLDG(); // fincs-edit
    void emitLD();
    void emitSTL();
    void emitSTS();
+   void emitSTG(); // fincs-edit
    void emitST();
    void emitALD();
    void emitAST();
@@ -2414,6 +2416,18 @@ CodeEmitterGM107::emitLDS()
    emitGPR  (0x00, insn->def(0));
 }
 
+// fincs-edit: Added this
+void
+CodeEmitterGM107::emitLDG()
+{
+   emitInsn (0xeed00000);
+   emitLDSTs(0x30, insn->dType);
+   emitLDSTc(0x2e);
+   emitField(0x2d, 1, insn->src(0).getIndirect(0)->getSize() == 8);
+   emitADDR (0x08, 0x14, 24, 0, insn->src(0));
+   emitGPR  (0x00, insn->def(0));
+}
+
 void
 CodeEmitterGM107::emitLD()
 {
@@ -2441,6 +2455,18 @@ CodeEmitterGM107::emitSTS()
 {
    emitInsn (0xef580000);
    emitLDSTs(0x30, insn->dType);
+   emitADDR (0x08, 0x14, 24, 0, insn->src(0));
+   emitGPR  (0x00, insn->src(1));
+}
+
+// fincs-edit: Added this
+void
+CodeEmitterGM107::emitSTG()
+{
+   emitInsn (0xeed80000);
+   emitLDSTs(0x30, insn->dType);
+   emitLDSTc(0x2e);
+   emitField(0x2d, 1, insn->src(0).getIndirect(0)->getSize() == 8);
    emitADDR (0x08, 0x14, 24, 0, insn->src(0));
    emitGPR  (0x00, insn->src(1));
 }
@@ -3567,7 +3593,7 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
       case FILE_MEMORY_CONST : emitLDC(); break;
       case FILE_MEMORY_LOCAL : emitLDL(); break;
       case FILE_MEMORY_SHARED: emitLDS(); break;
-      case FILE_MEMORY_GLOBAL: emitLD(); break;
+      case FILE_MEMORY_GLOBAL: emitLDG(); break; // fincs-edit
       default:
          assert(!"invalid load");
          emitNOP();
@@ -3578,7 +3604,7 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
       switch (insn->src(0).getFile()) {
       case FILE_MEMORY_LOCAL : emitSTL(); break;
       case FILE_MEMORY_SHARED: emitSTS(); break;
-      case FILE_MEMORY_GLOBAL: emitST(); break;
+      case FILE_MEMORY_GLOBAL: emitSTG(); break; // fincs-edit
       default:
          assert(!"invalid store");
          emitNOP();
