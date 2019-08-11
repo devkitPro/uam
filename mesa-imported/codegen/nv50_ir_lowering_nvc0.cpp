@@ -836,7 +836,7 @@ NVC0LegalizePostRA::visit(BasicBlock *bb)
                next = hi;
          }
 
-         if (i->op != OP_MOV && i->op != OP_PFETCH)
+         if (/*i->op != OP_MOV &&*/ i->op != OP_PFETCH) // fincs-edit: Prefer MOV Rd,RZ to MOV32I Rd,0
             replaceZero(i);
       }
    }
