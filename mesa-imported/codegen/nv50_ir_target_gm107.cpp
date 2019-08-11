@@ -187,72 +187,104 @@ TargetGM107::isBarrierRequired(const Instruction *insn) const
 
 enum DualIssueClass
 {
+   UNCLASSIFIED,
    ALU,
    FLOW,
-   MEM,
+   SMEM,
+   GMEM,
    SFU,
-   OTHER,
-   UNK
 };
 
 static enum DualIssueClass
 getDualIssueClass(const Instruction *insn)
 {
    switch (insn->op) {
-   case OP_ADD:
-   case OP_AND:
-   case OP_FMA:
-   case OP_MAD:
-   case OP_MAX:
-   case OP_MIN:
-   case OP_MOV:
-   case OP_MUL:
-   case OP_NOT:
-   case OP_OR:
-   case OP_PREEX2:
-   case OP_PRESIN:
-   case OP_SET:
-   case OP_SLCT:
-   case OP_SUB:
-   case OP_XOR:
-      return ALU;
    case OP_BRA:
-   case OP_EXIT:
+   case OP_CALL:
+   case OP_RET:
+   case OP_CONT:
    case OP_BREAK:
-   case OP_JOIN:
-   case OP_JOINAT:
+   case OP_PRERET:
+   case OP_PRECONT:
    case OP_PREBREAK:
+   case OP_JOINAT:
+   case OP_JOIN:
+   case OP_EXIT:
       return FLOW;
+
+   case OP_VFETCH:
+   case OP_PFETCH:
+   case OP_AFETCH:
+   case OP_EXPORT:
+   case OP_LINTERP:
+   case OP_PINTERP:
+      return SMEM;
+
+   case OP_LOAD:
+   case OP_STORE:
+   case OP_ATOM:
+      if (insn->src(0).getFile() == FILE_MEMORY_SHARED)
+         return SMEM;
+      else
+         return GMEM;
+      break;
+
+   case OP_TEX:
+   case OP_TXB:
+   case OP_TXL:
+   case OP_TXF:
+   case OP_TXQ:
+   case OP_TXD:
+   case OP_TXG:
+   case OP_TXLQ:
+   case OP_SULDB:
+   case OP_SULDP:
+   case OP_SUSTB:
+   case OP_SUSTP:
+   case OP_SUREDB:
+   case OP_SUREDP:
+   case OP_PIXLD:
+      return GMEM;
+
    case OP_ABS:
-   case OP_CEIL:
-   case OP_COS:
-   case OP_EX2:
-   case OP_FLOOR:
-   case OP_LG2:
    case OP_NEG:
+   case OP_SAT:
+   case OP_CEIL:
+   case OP_FLOOR:
+   case OP_TRUNC:
    case OP_RCP:
    case OP_RSQ:
-   case OP_SAT:
+   case OP_LG2:
    case OP_SIN:
+   case OP_COS:
+   case OP_EX2:
    case OP_SQRT:
-   case OP_TRUNC:
       return SFU;
-   case OP_LINTERP:
-   case OP_LOAD:
-   case OP_PINTERP:
-   case OP_STORE:
-   case OP_TEX:
-      return MEM;
 
    /* converts to predicates are special */
    case OP_CVT:
-      if (insn->getSrc(0)->inFile(FILE_GPR) && insn->getDef(0)->inFile(FILE_GPR))
+      if (insn->def(0).getFile() == FILE_PREDICATE || insn->src(0).getFile() == FILE_PREDICATE)
+         return ALU;
+      else
          return SFU;
-      return OTHER;
 
-   /* not verified */
+   case OP_DISCARD:
+   case OP_MEMBAR:
+   case OP_EMIT:
+   case OP_RESTART:
+   case OP_TEXBAR:
+   case OP_RDSV:
+   case OP_QUADON:
+   case OP_QUADPOP:
+   case OP_BAR:
+   case OP_CCTL:
+   case OP_VOTE:
+   case OP_SHFL: // maxas says this is smem but I don't believe it
+      return UNCLASSIFIED;
+
+   /* all others are ALU */
    default:
-      return UNK;
+      return ALU;
    }
 }
 
@@ -265,15 +297,7 @@ TargetGM107::canDualIssue(const Instruction *a, const Instruction *b) const
    DualIssueClass ac = getDualIssueClass(a);
    DualIssueClass bc = getDualIssueClass(b);
 
-   if (ac == UNK || bc == UNK) {
-/*      printf("please check:\n");
-      a->print();
-      b->print();
-      printf("\n");*/
-      return false;
-   }
-
-   if (ac == OTHER || bc == OTHER)
+   if (ac == UNCLASSIFIED || bc == UNCLASSIFIED)
       return false;
 
    if (ac == bc)
