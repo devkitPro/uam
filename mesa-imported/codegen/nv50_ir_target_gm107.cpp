@@ -303,6 +303,10 @@ TargetGM107::canDualIssue(const Instruction *a, const Instruction *b) const
    if (ac == bc)
       return false;
 
+   /* Hunch: variable-latency opcodes cannot be the first instruction in a dual issue */
+   if (isBarrierRequired(a))
+      return false;
+
    /* maxas suggest we can't dual issue if both load immediates */
    bool hasImm = false;
 
@@ -315,10 +319,7 @@ TargetGM107::canDualIssue(const Instruction *a, const Instruction *b) const
          if (b->getSrc(i)->inFile(FILE_IMMEDIATE))
             return false;
 
-   if (ac == ALU)
-      return true;
-
-   return false;
+   return true;
 }
 
 // Return the number of stall counts needed to complete a single instruction.
