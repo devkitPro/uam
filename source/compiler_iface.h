@@ -11,6 +11,9 @@
 
 #include "glsl_frontend.h"
 
+#include "nv_shader_header.h"
+#include "dksh.h"
+
 class DekoCompiler
 {
 	pipeline_stage m_stage;
@@ -20,6 +23,12 @@ class DekoCompiler
 	nv50_ir_prog_info m_info;
 	void* m_code;
 	uint32_t m_codeSize;
+
+	NvShaderHeader m_nvsh;
+	DkshProgramHeader m_dkph;
+
+	void RetrieveAndPadCode();
+	void GenerateHeaders();
 
 public:
 	DekoCompiler(pipeline_stage stage, int optLevel = 3);

@@ -7,4 +7,5 @@ build/
 *.bin
 *.glsl
 *.tgsi
+*.dksh
 *.txt

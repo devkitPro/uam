@@ -168,34 +168,54 @@ nvc0_program_assign_varying_slots(struct nv50_ir_prog_info *info)
 }
 
 DekoCompiler::DekoCompiler(pipeline_stage stage, int optLevel) :
-	m_stage{stage}, m_glsl{}, m_tgsi{}, m_tgsiNumTokens{}, m_info{}, m_code{}, m_codeSize{}
+	m_stage{stage}, m_glsl{}, m_tgsi{}, m_tgsiNumTokens{}, m_info{}, m_code{}, m_codeSize{},
+	m_nvsh{}, m_dkph{}
 {
+	m_nvsh.version = 3;
+	m_nvsh.sass_version = 3;
+
 	uint16_t resbase;
 	switch (stage)
 	{
 		default:
 		case pipeline_stage_vertex:
 			m_info.type = PIPE_SHADER_VERTEX;
+			m_nvsh.sph_type = NvSphType_VTG;
+			m_nvsh.shader_type = NvShaderType_Vertex;
+			m_dkph.type = DkshProgramType_Vertex;
 			resbase = 0x010;
 			break;
 		case pipeline_stage_tess_ctrl:
 			m_info.type = PIPE_SHADER_TESS_CTRL;
+			m_nvsh.sph_type = NvSphType_VTG;
+			m_nvsh.shader_type = NvShaderType_TessellationInit;
+			m_dkph.type = DkshProgramType_TessCtrl;
 			resbase = 0x1b0;
 			break;
 		case pipeline_stage_tess_eval:
 			m_info.type = PIPE_SHADER_TESS_EVAL;
+			m_nvsh.sph_type = NvSphType_VTG;
+			m_nvsh.shader_type = NvShaderType_Tessellation;
+			m_dkph.type = DkshProgramType_TessEval;
 			resbase = 0x350;
 			break;
 		case pipeline_stage_geometry:
 			m_info.type = PIPE_SHADER_GEOMETRY;
+			m_nvsh.sph_type = NvSphType_VTG;
+			m_nvsh.shader_type = NvShaderType_Geometry;
+			m_dkph.type = DkshProgramType_Geometry;
 			resbase = 0x4f0;
 			break;
 		case pipeline_stage_fragment:
 			m_info.type = PIPE_SHADER_FRAGMENT;
+			m_nvsh.sph_type = NvSphType_PS;
+			m_nvsh.shader_type = NvShaderType_Pixel;
+			m_dkph.type = DkshProgramType_Fragment;
 			resbase = 0x690;
 			break;
 		case pipeline_stage_compute:
 			m_info.type = PIPE_SHADER_COMPUTE;
+			m_dkph.type = DkshProgramType_Compute;
 			resbase = 0x080;
 			break;
 	}
@@ -249,6 +269,13 @@ bool DekoCompiler::CompileGlsl(const char* glsl)
 		return false;
 	}
 
+	RetrieveAndPadCode();
+	GenerateHeaders();
+	return true;
+}
+
+void DekoCompiler::RetrieveAndPadCode()
+{
 	uint32_t numInsns = m_info.bin.codeSize/8;
 	uint64_t* insns = (uint64_t*)m_info.bin.code;
 	uint32_t totalNumInsns = (numInsns + 8) &~ 7;
@@ -279,13 +306,65 @@ bool DekoCompiler::CompileGlsl(const char* glsl)
 
 	m_code = insns;
 	m_codeSize = 8*totalNumInsns;
-	return true;
+}
+
+void DekoCompiler::GenerateHeaders()
+{
+	m_dkph.entrypoint = m_stage != pipeline_stage_compute ? 0x80 : 0x40;
+	m_dkph.num_gprs = m_info.bin.maxGPR + 1;
+	if (m_dkph.num_gprs < 4) m_dkph.num_gprs = 4;
+
+	unsigned local_pos_sz = (m_info.bin.tlsSpace + 0xF) &~ 0xF; // 16-byte aligned
+	unsigned local_neg_sz = 0;
+	unsigned crs_sz       = m_stage == pipeline_stage_compute ? 0x800 : 0; // 512-byte aligned; TODO: Proper logic
+
+	m_dkph.per_warp_scratch_sz = (local_pos_sz + local_neg_sz) * 32 + crs_sz;
+
+	if (m_stage == pipeline_stage_compute)
+	{
+		m_dkph.comp.block_dims[0]    = m_info.prop.cp.numThreads[0];
+		m_dkph.comp.block_dims[1]    = m_info.prop.cp.numThreads[1];
+		m_dkph.comp.block_dims[2]    = m_info.prop.cp.numThreads[2];
+		m_dkph.comp.shared_mem_sz    = (m_info.bin.smemSize + 0xFF) &~ 0xFF;
+		m_dkph.comp.local_pos_mem_sz = local_pos_sz;
+		m_dkph.comp.local_neg_mem_sz = local_neg_sz;
+		m_dkph.comp.crs_sz           = crs_sz;
+		m_dkph.comp.num_barriers     = m_info.numBarriers;
+	}
+	else
+	{
+		// TODO
+	}
 }
 
 void DekoCompiler::OutputDksh(const char* dkshFile)
 {
-	// temp
-	OutputRawCode(dkshFile);
+	DkshHeader hdr = {};
+	hdr.magic        = DKSH_MAGIC;
+	hdr.version      = 0;
+	hdr.num_programs = 1;
+	hdr.module_sz    = m_dkph.entrypoint + m_codeSize; // TODO: add data segment
+
+	FILE* f = fopen(dkshFile, "wb");
+	if (f)
+	{
+		fwrite(&hdr, 1, sizeof(hdr), f);
+		if (m_stage != pipeline_stage_compute)
+			fwrite(&m_nvsh, 1, sizeof(m_nvsh), f);
+		else
+		{
+			uint32_t req_padding = m_dkph.entrypoint - sizeof(hdr);
+			uint32_t dummy = 0xdeadf00d;
+			for (uint32_t i = 0; i < req_padding; i += 4)
+				fwrite(&dummy, 1, 4, f);
+		}
+
+		fwrite(m_code, 1, m_codeSize, f);
+		// TODO: write data segment
+
+		fwrite(&m_dkph, 1, sizeof(m_dkph), f);
+		fclose(f);
+	}
 }
 
 void DekoCompiler::OutputRawCode(const char* rawFile)
