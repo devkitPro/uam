@@ -7,25 +7,25 @@ static uint32_t
 nvc0_shader_input_address(unsigned sn, unsigned si)
 {
 	switch (sn) {
-	case TGSI_SEMANTIC_TESSOUTER:    return 0x000 + si * 0x4;
-	case TGSI_SEMANTIC_TESSINNER:    return 0x010 + si * 0x4;
-	case TGSI_SEMANTIC_PATCH:        return 0x020 + si * 0x10;
-	case TGSI_SEMANTIC_PRIMID:       return 0x060;
-	case TGSI_SEMANTIC_LAYER:        return 0x064;
-	case TGSI_SEMANTIC_VIEWPORT_INDEX:return 0x068;
-	case TGSI_SEMANTIC_PSIZE:        return 0x06c;
-	case TGSI_SEMANTIC_POSITION:     return 0x070;
-	case TGSI_SEMANTIC_GENERIC:      return 0x080 + si * 0x10;
-	case TGSI_SEMANTIC_FOG:          return 0x2e8;
-	case TGSI_SEMANTIC_COLOR:        return 0x280 + si * 0x10;
-	case TGSI_SEMANTIC_BCOLOR:       return 0x2a0 + si * 0x10;
-	case TGSI_SEMANTIC_CLIPDIST:     return 0x2c0 + si * 0x10;
-	case TGSI_SEMANTIC_CLIPVERTEX:   return 0x270;
-	case TGSI_SEMANTIC_PCOORD:       return 0x2e0;
-	case TGSI_SEMANTIC_TESSCOORD:    return 0x2f0;
-	case TGSI_SEMANTIC_INSTANCEID:   return 0x2f8;
-	case TGSI_SEMANTIC_VERTEXID:     return 0x2fc;
-	case TGSI_SEMANTIC_TEXCOORD:     return 0x300 + si * 0x10;
+	case TGSI_SEMANTIC_TESSOUTER:     return NvAttrib_TessOuter(si);
+	case TGSI_SEMANTIC_TESSINNER:     return NvAttrib_TessInner(si);
+	case TGSI_SEMANTIC_PATCH:         return NvAttrib_Patch(si);
+	case TGSI_SEMANTIC_PRIMID:        return NvAttrib_PrimitiveId;
+	case TGSI_SEMANTIC_LAYER:         return NvAttrib_RtArrayIdx;
+	case TGSI_SEMANTIC_VIEWPORT_INDEX:return NvAttrib_ViewportIdx;
+	case TGSI_SEMANTIC_PSIZE:         return NvAttrib_PointSize;
+	case TGSI_SEMANTIC_POSITION:      return NvAttrib_Position;
+	case TGSI_SEMANTIC_GENERIC:       return NvAttrib_Generic(si);
+	case TGSI_SEMANTIC_FOG:           return NvAttrib_FogCoordinate;
+	case TGSI_SEMANTIC_COLOR:         return NvAttrib_FrontColor(si);
+	case TGSI_SEMANTIC_BCOLOR:        return NvAttrib_BackColor(si);
+	case TGSI_SEMANTIC_CLIPDIST:      return NvAttrib_ClipDistance(4*si); // TGSI treats this field as vec4[2] instead of float[8]
+	case TGSI_SEMANTIC_CLIPVERTEX:    return NvAttrib_Generic(31);
+	case TGSI_SEMANTIC_PCOORD:        return NvAttrib_PointSpriteS;
+	case TGSI_SEMANTIC_TESSCOORD:     return NvAttrib_TessEvalPointU;
+	case TGSI_SEMANTIC_INSTANCEID:    return NvAttrib_InstanceId;
+	case TGSI_SEMANTIC_VERTEXID:      return NvAttrib_VertexId;
+	case TGSI_SEMANTIC_TEXCOORD:      return NvAttrib_FixedFncTex(si);
 	default:
 		assert(!"invalid TGSI input semantic");
 		return ~0;
@@ -36,21 +36,21 @@ static uint32_t
 nvc0_shader_output_address(unsigned sn, unsigned si)
 {
 	switch (sn) {
-	case TGSI_SEMANTIC_TESSOUTER:     return 0x000 + si * 0x4;
-	case TGSI_SEMANTIC_TESSINNER:     return 0x010 + si * 0x4;
-	case TGSI_SEMANTIC_PATCH:         return 0x020 + si * 0x10;
-	case TGSI_SEMANTIC_PRIMID:        return 0x060;
-	case TGSI_SEMANTIC_LAYER:         return 0x064;
-	case TGSI_SEMANTIC_VIEWPORT_INDEX:return 0x068;
-	case TGSI_SEMANTIC_PSIZE:         return 0x06c;
-	case TGSI_SEMANTIC_POSITION:      return 0x070;
-	case TGSI_SEMANTIC_GENERIC:       return 0x080 + si * 0x10;
-	case TGSI_SEMANTIC_FOG:           return 0x2e8;
-	case TGSI_SEMANTIC_COLOR:         return 0x280 + si * 0x10;
-	case TGSI_SEMANTIC_BCOLOR:        return 0x2a0 + si * 0x10;
-	case TGSI_SEMANTIC_CLIPDIST:      return 0x2c0 + si * 0x10;
-	case TGSI_SEMANTIC_CLIPVERTEX:    return 0x270;
-	case TGSI_SEMANTIC_TEXCOORD:      return 0x300 + si * 0x10;
+	case TGSI_SEMANTIC_TESSOUTER:     return NvAttrib_TessOuter(si);
+	case TGSI_SEMANTIC_TESSINNER:     return NvAttrib_TessInner(si);
+	case TGSI_SEMANTIC_PATCH:         return NvAttrib_Patch(si);
+	case TGSI_SEMANTIC_PRIMID:        return NvAttrib_PrimitiveId;
+	case TGSI_SEMANTIC_LAYER:         return NvAttrib_RtArrayIdx;
+	case TGSI_SEMANTIC_VIEWPORT_INDEX:return NvAttrib_ViewportIdx;
+	case TGSI_SEMANTIC_PSIZE:         return NvAttrib_PointSize;
+	case TGSI_SEMANTIC_POSITION:      return NvAttrib_Position;
+	case TGSI_SEMANTIC_GENERIC:       return NvAttrib_Generic(si);
+	case TGSI_SEMANTIC_FOG:           return NvAttrib_FogCoordinate;
+	case TGSI_SEMANTIC_COLOR:         return NvAttrib_FrontColor(si);
+	case TGSI_SEMANTIC_BCOLOR:        return NvAttrib_BackColor(si);
+	case TGSI_SEMANTIC_CLIPDIST:      return NvAttrib_ClipDistance(4*si); // TGSI treats this field as vec4[2] instead of float[8]
+	case TGSI_SEMANTIC_CLIPVERTEX:    return NvAttrib_Generic(31);
+	case TGSI_SEMANTIC_TEXCOORD:      return NvAttrib_FixedFncTex(si);
 	/* case TGSI_SEMANTIC_VIEWPORT_MASK: return 0x3a0; */
 	case TGSI_SEMANTIC_EDGEFLAG:      return ~0;
 	default:
@@ -76,7 +76,7 @@ nvc0_vp_assign_input_slots(struct nv50_ir_prog_info *info)
 			break;
 		}
 		for (c = 0; c < 4; ++c)
-			info->in[i].slot[c] = (0x80 + n * 0x10 + c * 0x4) / 4;
+			info->in[i].slot[c] = (NvAttrib_Generic(n) + c * 0x4) / 4;
 		++n;
 	}
 
@@ -173,6 +173,8 @@ DekoCompiler::DekoCompiler(pipeline_stage stage, int optLevel) :
 {
 	m_nvsh.version = 3;
 	m_nvsh.sass_version = 3;
+	m_nvsh.store_req_start = 0xff;
+	m_nvsh.store_req_end = 0x00;
 
 	uint16_t resbase;
 	switch (stage)
@@ -333,7 +335,231 @@ void DekoCompiler::GenerateHeaders()
 	}
 	else
 	{
-		// TODO
+		m_nvsh.sh_local_mem_lo_sz  = local_pos_sz;
+		m_nvsh.sh_local_mem_hi_sz  = local_neg_sz;
+		m_nvsh.sh_local_mem_crs_sz = crs_sz;
+
+		if (m_info.io.globalAccess & 2)
+			m_nvsh.does_global_store = 1;
+		if (m_info.io.globalAccess || m_info.bin.tlsSpace)
+			m_nvsh.does_load_or_store = 1;
+		if (m_info.io.fp64)
+			m_nvsh.does_fp64 = 1;
+
+		if (m_stage == pipeline_stage_fragment)
+		{
+			if (m_info.prop.fp.numColourResults)
+				m_nvsh.mrt_enable = 1;
+			if (m_info.prop.fp.usesDiscard)
+				m_nvsh.kills_pixels = 1;
+
+			// Generate input map (Imap)
+			//-----------------------------------------------------------------
+			for (unsigned i = 0; i < m_info.numInputs; i ++)
+			{
+				auto& in = m_info.in[i];
+				unsigned interp = NvPixelImap_Perspective;
+				if (in.linear)
+					interp = NvPixelImap_ScreenLinear;
+				else if (in.flat)
+					interp = NvPixelImap_Constant;
+				for (unsigned j = 0; j < 4; j ++)
+				{
+					unsigned attr = 4*in.slot[j];
+					if (in.mask & (1u<<j))
+						m_nvsh.SetPsImap(attr, interp);
+				}
+			}
+
+			if (m_info.prop.fp.readsFramebuffer)
+				m_nvsh.SetImapSysval(NvSysval_RtArrayIdx); // mark layer as read
+
+			// Reading sample locations implies using PositionX/Y
+			if (m_info.prop.fp.readsFramebuffer || m_info.prop.fp.readsSampleLocations)
+			{
+				m_nvsh.SetImapSysval(NvSysval_PositionX);
+				m_nvsh.SetImapSysval(NvSysval_PositionY);
+			}
+
+			// For simplicity and convenience's sake, let's assume gl_FragCoord.w will always be read.
+			m_nvsh.SetImapSysval(NvSysval_PositionW);
+
+			// Generate output map (Omap)
+			//-----------------------------------------------------------------
+			for (unsigned i = 0; i < m_info.numOutputs; i ++)
+				if (m_info.out[i].sn == TGSI_SEMANTIC_COLOR)
+					m_nvsh.SetPsOmapTarget(m_info.out[i].si, 0xf);
+
+			// There are no "regular" attachments, but the shader still needs to be
+			// executed. It seems like it wants to think that it has some color
+			// outputs in order to actually run.
+			if (m_info.prop.fp.numColourResults==0 && !m_info.prop.fp.writesDepth)
+				m_nvsh.SetPsOmapTarget(0, 0xf);
+
+			if (m_info.io.sampleMask < PIPE_MAX_SHADER_OUTPUTS)
+				m_nvsh.ps.omap_sample_mask = 1;
+			if (m_info.prop.fp.writesDepth)
+				m_nvsh.ps.omap_depth = 1;
+
+			// Miscellaneous
+			//-----------------------------------------------------------------
+			m_dkph.frag.early_fragment_tests = m_info.prop.fp.earlyFragTests;
+			m_dkph.frag.post_depth_coverage  = m_info.prop.fp.postDepthCoverage;
+			// TODO: fill out more m_dkph.frag fields
+		}
+		else
+		{
+			switch (m_stage)
+			{
+				default:
+				case pipeline_stage_vertex:
+					break; // Nothing to do here
+
+				case pipeline_stage_tess_ctrl:
+				{
+					unsigned num_patch_attribs = 6; // By default, allow shaders to write to TessLodLeft..TessInteriorV.
+					if (m_info.numPatchConstants) // If there are per-patch attribs, expand the per-patch attrib section.
+						num_patch_attribs = 8 + 4*m_info.numPatchConstants;
+					m_nvsh.per_patch_attrib_cnt = num_patch_attribs;
+					m_nvsh.thr_per_input_prim = m_info.prop.tp.outputPatchSize;
+					// It is unknown whether the following "reserved" fields are actually used or not,
+					// but both nouveau and official shaders emit it.
+					m_nvsh._reserved3 = num_patch_attribs & 0xF;
+					m_nvsh._reserved4 = num_patch_attribs >> 4;
+					break;
+				}
+
+				case pipeline_stage_tess_eval:
+				{
+					switch (m_info.prop.tp.domain)
+					{
+						case PIPE_PRIM_LINES:
+							m_dkph.tess_eval.param_c8 = 0; // NVC0_3D_TESS_MODE_PRIM_ISOLINES
+							break;
+						case PIPE_PRIM_TRIANGLES:
+							m_dkph.tess_eval.param_c8 = 1; // NVC0_3D_TESS_MODE_PRIM_TRIANGLES
+							break;
+						default:
+						case PIPE_PRIM_QUADS:
+							m_dkph.tess_eval.param_c8 = 2; // NVC0_3D_TESS_MODE_PRIM_QUADS
+							break;
+
+					}
+					switch (m_info.prop.tp.partitioning)
+					{
+						default:
+						case PIPE_TESS_SPACING_EQUAL:
+							m_dkph.tess_eval.param_c8 |= 0 << 4; // NVC0_3D_TESS_MODE_SPACING_EQUAL
+							break;
+						case PIPE_TESS_SPACING_FRACTIONAL_ODD:
+							m_dkph.tess_eval.param_c8 |= 1 << 4; // NVC0_3D_TESS_MODE_SPACING_FRACTIONAL_ODD
+							break;
+						case PIPE_TESS_SPACING_FRACTIONAL_EVEN:
+							m_dkph.tess_eval.param_c8 |= 1 << 4; // NVC0_3D_TESS_MODE_SPACING_FRACTIONAL_EVEN
+							break;
+					}
+					if (m_info.prop.tp.outputPrim != PIPE_PRIM_POINTS)
+					{
+						if (m_info.prop.tp.domain == PIPE_PRIM_LINES)
+							m_dkph.tess_eval.param_c8 |= 1 << 8; // NVC0_3D_TESS_MODE_CW
+						else if (m_info.prop.tp.winding < 0) // counter-clockwise
+							m_dkph.tess_eval.param_c8 |= 2 << 8; // NVC0_3D_TESS_MODE_CONNECTED
+						else // clockwise
+							m_dkph.tess_eval.param_c8 |= 3 << 8; // NVC0_3D_TESS_MODE_CW|NVC0_3D_TESS_MODE_CONNECTED
+					}
+					break;
+				}
+
+				case pipeline_stage_geometry:
+				{
+					unsigned num_threads = m_info.prop.gp.instanceCount;
+					unsigned max_vertices = m_info.prop.gp.maxVertices;
+
+					if (num_threads > 32) num_threads = 32; // Can't have more than the max num of threads in a warp, apparently...
+					if (max_vertices < 1) max_vertices = 1;
+					else if (max_vertices > 1024) max_vertices = 1024;
+
+					m_nvsh.thr_per_input_prim = num_threads;
+					m_nvsh.max_out_vtx_cnt = max_vertices;
+
+					switch (m_info.prop.gp.outputPrim)
+					{
+						default:
+						case PIPE_PRIM_POINTS:
+							m_nvsh.output_topology = NvOutputTopology_PointList;
+							m_nvsh.stream_out_mask = 0xf;
+							break;
+						case PIPE_PRIM_LINE_STRIP:
+							m_nvsh.output_topology = NvOutputTopology_LineStrip;
+							m_nvsh.stream_out_mask = 1;
+							break;
+						case PIPE_PRIM_TRIANGLE_STRIP:
+							m_nvsh.output_topology = NvOutputTopology_TriangleStrip;
+							m_nvsh.stream_out_mask = 1;
+							break;
+					}
+
+					break;
+				}
+			}
+
+			// Generate input map (Imap)
+			//-----------------------------------------------------------------
+			for (unsigned i = 0; i < m_info.numInputs; i ++)
+			{
+				auto& in = m_info.in[i];
+				if (in.patch)
+					continue; // Per-patch attributes do not use Imap.
+				for (unsigned j = 0; j < 4; j ++)
+				{
+					unsigned attr = 4*in.slot[j];
+					if (in.mask & (1u<<j))
+						m_nvsh.SetVtgImap(attr);
+				}
+			}
+
+			for (unsigned i = 0; i < m_info.numSysVals; i ++)
+			{
+				switch (m_info.sv[i].sn)
+				{
+					case TGSI_SEMANTIC_PRIMID:
+						m_nvsh.SetImapSysval(NvSysval_PrimitiveId);
+						break;
+					case TGSI_SEMANTIC_INSTANCEID:
+						m_nvsh.SetImapSysval(NvSysval_InstanceId);
+						break;
+					case TGSI_SEMANTIC_VERTEXID:
+						m_nvsh.SetImapSysval(NvSysval_VertexId);
+						break;
+					case TGSI_SEMANTIC_TESSCOORD:
+						// TessEvalPointU/V are actually stored in the output ISBE, so treat them as such.
+						m_nvsh.SetVtgOmapSysval(NvSysval_TessEvalPointU);
+						m_nvsh.SetVtgOmapSysval(NvSysval_TessEvalPointV);
+						m_nvsh.UpdateStoreReqRange(NvAttrib_TessEvalPointU);
+						m_nvsh.UpdateStoreReqRange(NvAttrib_TessEvalPointV);
+						break;
+				}
+			}
+
+			// Generate output map (Omap)
+			//-----------------------------------------------------------------
+			for (unsigned i = 0; i < m_info.numOutputs; i ++)
+			{
+				auto& out = m_info.out[i];
+				if (out.patch)
+					continue; // Per-patch attributes do not use Omap.
+				for (unsigned j = 0; j < 4; j ++)
+				{
+					unsigned attr = 4*out.slot[j];
+					if (out.mask & (1u<<j))
+					{
+						m_nvsh.SetVtgOmap(attr);
+						if (out.oread)
+							m_nvsh.UpdateStoreReqRange(attr);
+					}
+				}
+			}
+		}
 	}
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "nv_attributes.h"
 
 // Nvidia Shader Program Header
 // See https://nvidia.github.io/open-gpu-doc/Shader-Program-Header/Shader-Program-Header.html
@@ -22,8 +23,8 @@ enum
 enum
 {
 	NvOutputTopology_PointList     = 1,
-	NvOutputTopology_LineStrip     = 2,
-	NvOutputTopology_TriangleStrip = 3,
+	NvOutputTopology_LineStrip     = 6,
+	NvOutputTopology_TriangleStrip = 7,
 };
 
 enum
@@ -69,6 +70,14 @@ enum
 #define NvSysval_ClipDistance(_n)    (NvSysval_ClipDistance0+(_n))
 #define NvSysval_PointSprite(_n)     (NvSysval_PointSpriteS+(_n))
 #define NvSysval_TessEvalPoint(_n)   (NvSysval_TessEvalPointU+(_n))
+
+enum
+{
+	NvPixelImap_Unused       = 0,
+	NvPixelImap_Constant     = 1,
+	NvPixelImap_Perspective  = 2,
+	NvPixelImap_ScreenLinear = 3,
+};
 
 struct NvShaderHeader
 {
@@ -131,29 +140,104 @@ struct NvShaderHeader
 			uint16_t imap_sysvals_c;
 			uint8_t  imap_fixed_fnc_tex[10];
 			uint16_t _reserved0;
-			uint8_t  omap_target[4];
+			uint32_t omap_target;
 			uint32_t omap_sample_mask : 1;
 			uint32_t omap_depth       : 1;
 			uint32_t _reserved1       : 30;
 		} ps;
 	};
 
-	void SetImapSysval(unsigned val)
+	static bool _Check(unsigned idx, unsigned first, unsigned last)
 	{
-		if (val < 32)
-			imap_sysvals_ab    |= UINT32_C(1) << val;
-		else if (sph_type == NvSphType_VTG)
-			vtg.imap_sysvals_c |= UINT16_C(1) << (val - 32);
-		else if (sph_type == NvSphType_PS)
-			ps.imap_sysvals_c  |= UINT16_C(1) << (val - 32);
+		idx /= 4;
+		first /= 4;
+		last /= 4;
+		return first <= idx && idx <= last;
 	}
 
-	void SetVtgOmapSysval(unsigned val)
+	static bool _CheckAndRemap(unsigned& idx, unsigned first, unsigned last, unsigned map)
 	{
-		if (val < 32)
-			vtg.omap_sysvals_ab |= UINT32_C(1) << val;
+		bool rc = _Check(idx, first, last);
+		if (rc) idx = (idx - first)/4 + map;
+		return rc;
+	}
+
+	void UpdateStoreReqRange(unsigned idx)
+	{
+		idx /= 4;
+		store_req_start = idx < store_req_start ? idx : store_req_start;
+		store_req_end   = idx > store_req_end   ? idx : store_req_end;
+	}
+
+	void SetImapSysval(unsigned idx)
+	{
+		if (idx < 32)
+			imap_sysvals_ab    |= UINT32_C(1) << idx;
+		else if (sph_type == NvSphType_VTG)
+			vtg.imap_sysvals_c |= UINT16_C(1) << (idx - 32);
+		else if (sph_type == NvSphType_PS)
+			ps.imap_sysvals_c  |= UINT16_C(1) << (idx - 32);
+	}
+
+	void SetVtgImap(unsigned idx)
+	{
+		if (_CheckAndRemap(idx, NvAttrib_TessLodLeft, NvAttrib_TessInteriorV, NvSysval_TessLodLeft))
+			SetImapSysval(idx);
+		else if (_CheckAndRemap(idx, NvAttrib_PrimitiveId, NvAttrib_Position+0xc, NvSysval_PrimitiveId))
+			SetImapSysval(idx);
+		else if (_CheckAndRemap(idx, NvAttrib_Generic(0), NvAttrib_Generic(31)+0xc, 0))
+			vtg.imap_generic_vector[idx/8] |= 1u << (idx&7);
+		else if (_CheckAndRemap(idx, NvAttrib_FrontDiffuse, NvAttrib_BackSpecular+0xc, 0))
+			vtg.imap_color |= 1u << idx;
+		else if (_CheckAndRemap(idx, NvAttrib_ClipDistance(0), NvAttrib_VertexId, NvSysval_ClipDistance0))
+			SetImapSysval(idx);
+		else if (_CheckAndRemap(idx, NvAttrib_FixedFncTex(0), NvAttrib_FixedFncTex(9)+0xc, 0))
+			vtg.imap_fixed_fnc_tex[idx/8] |= 1u << (idx&7);
+	}
+
+	void SetVtgOmapSysval(unsigned idx)
+	{
+		if (idx < 32)
+			vtg.omap_sysvals_ab |= UINT32_C(1) << idx;
 		else
-			vtg.omap_sysvals_c  |= UINT16_C(1) << (val - 32);
+			vtg.omap_sysvals_c  |= UINT16_C(1) << (idx - 32);
+	}
+
+	void SetVtgOmap(unsigned idx)
+	{
+		if (_CheckAndRemap(idx, NvAttrib_TessLodLeft, NvAttrib_TessInteriorV, NvSysval_TessLodLeft))
+			SetVtgOmapSysval(idx);
+		else if (_CheckAndRemap(idx, NvAttrib_PrimitiveId, NvAttrib_Position+0xc, NvSysval_PrimitiveId))
+			SetVtgOmapSysval(idx);
+		else if (_CheckAndRemap(idx, NvAttrib_Generic(0), NvAttrib_Generic(31)+0xc, 0))
+			vtg.omap_generic_vector[idx/8] |= 1u << (idx&7);
+		else if (_CheckAndRemap(idx, NvAttrib_FrontDiffuse, NvAttrib_BackSpecular+0xc, 0))
+			vtg.omap_color |= 1u << idx;
+		else if (_CheckAndRemap(idx, NvAttrib_ClipDistance(0), NvAttrib_VertexId, NvSysval_ClipDistance0))
+			SetVtgOmapSysval(idx);
+		else if (_CheckAndRemap(idx, NvAttrib_FixedFncTex(0), NvAttrib_FixedFncTex(9)+0xc, 0))
+			vtg.omap_fixed_fnc_tex[idx/8] |= 1u << (idx&7);
+	}
+
+	void SetPsImap(unsigned idx, unsigned interp = NvPixelImap_Constant)
+	{
+		if (_CheckAndRemap(idx, NvAttrib_TessLodLeft, NvAttrib_TessInteriorV, NvSysval_TessLodLeft))
+			SetImapSysval(idx);
+		else if (_CheckAndRemap(idx, NvAttrib_PrimitiveId, NvAttrib_Position+0xc, NvSysval_PrimitiveId))
+			SetImapSysval(idx);
+		else if (_CheckAndRemap(idx, NvAttrib_Generic(0), NvAttrib_Generic(31)+0xc, 0))
+			ps.imap_generic_vector[idx/4] |= interp << (2*(idx&3));
+		else if (_CheckAndRemap(idx, NvAttrib_FrontDiffuse, NvAttrib_FrontSpecular+0xc, 0))
+			ps.imap_color |= interp << (2*idx);
+		else if (_CheckAndRemap(idx, NvAttrib_ClipDistance(0), NvAttrib_VertexId, NvSysval_ClipDistance0))
+			SetImapSysval(idx);
+		else if (_CheckAndRemap(idx, NvAttrib_FixedFncTex(0), NvAttrib_FixedFncTex(9)+0xc, 0))
+			ps.imap_fixed_fnc_tex[idx/4] |= interp << (2*(idx&3));
+	}
+
+	void SetPsOmapTarget(unsigned idx, unsigned mask)
+	{
+		ps.omap_target |= mask << (4*idx);
 	}
 };
 

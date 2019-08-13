@@ -11,6 +11,7 @@
 
 #include "glsl_frontend.h"
 
+#include "nv_attributes.h"
 #include "nv_shader_header.h"
 #include "dksh.h"
 
