@@ -3,9 +3,11 @@
 
 // deko3d shader module file format
 // File extension: .dksh
-// Layout:
+// The file is composed of two sections, both whose size is a multiple of 256 bytes:
+// - Control section, containing shader information/metadata
+// - Code section, containing actual shader code and compiler-generated constbufs
+// Layout of the control section:
 // - DkshHeader
-// - Raw module data
 // - DkshProgramHeader[]
 
 #define DKSH_MAGIC UINT32_C(0x48534B44) // DKSH
@@ -13,13 +15,12 @@
 struct DkshHeader
 {
 	uint32_t magic; // DKSH_MAGIC
-	uint32_t version; // 0
+	uint32_t header_sz; // sizeof(DkshHeader)
+	uint32_t control_sz;
+	uint32_t code_sz;
+	uint32_t programs_off;
 	uint32_t num_programs;
-	uint32_t module_sz; // starting from DkshHeader, multiple of 64
-	uint32_t reserved[8];
 };
-
-static_assert(sizeof(DkshHeader)==48, "Wrong size for DkshHeader");
 
 enum
 {

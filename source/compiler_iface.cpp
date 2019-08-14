@@ -1,5 +1,33 @@
 #include "compiler_iface.h"
 
+namespace
+{
+	constexpr unsigned s_shaderStartOffset = 0x80 - sizeof(NvShaderHeader);
+
+	template <typename T>
+	constexpr T Align256(T x)
+	{
+		return (x + 0xFF) &~ 0xFF;
+	}
+
+	void FileWritePadding(FILE* f, uint32_t req, uint32_t dummy = 0)
+	{
+		while (req >= sizeof(dummy))
+		{
+			fwrite(&dummy, 1, sizeof(dummy), f);
+			req -= sizeof(dummy);
+		}
+		if (req)
+			fwrite(&dummy, 1, req, f);
+	}
+
+	void FileAlign256(FILE* f)
+	{
+		long pos = ftell(f);
+		FileWritePadding(f, Align256(pos) - pos);
+	}
+}
+
 /* NOTE: Using a[0x270] in FP may cause an error even if we're using less than
  * 124 scalar varying values.
  */
@@ -312,7 +340,7 @@ void DekoCompiler::RetrieveAndPadCode()
 
 void DekoCompiler::GenerateHeaders()
 {
-	m_dkph.entrypoint = m_stage != pipeline_stage_compute ? 0x80 : 0x40;
+	m_dkph.entrypoint = m_stage != pipeline_stage_compute ? s_shaderStartOffset : 0;
 	m_dkph.num_gprs = m_info.bin.maxGPR + 1;
 	if (m_dkph.num_gprs < 4) m_dkph.num_gprs = 4;
 
@@ -327,7 +355,7 @@ void DekoCompiler::GenerateHeaders()
 		m_dkph.comp.block_dims[0]    = m_info.prop.cp.numThreads[0];
 		m_dkph.comp.block_dims[1]    = m_info.prop.cp.numThreads[1];
 		m_dkph.comp.block_dims[2]    = m_info.prop.cp.numThreads[2];
-		m_dkph.comp.shared_mem_sz    = (m_info.bin.smemSize + 0xFF) &~ 0xFF;
+		m_dkph.comp.shared_mem_sz    = Align256(m_info.bin.smemSize);
 		m_dkph.comp.local_pos_mem_sz = local_pos_sz;
 		m_dkph.comp.local_neg_mem_sz = local_neg_sz;
 		m_dkph.comp.crs_sz           = crs_sz;
@@ -567,28 +595,30 @@ void DekoCompiler::OutputDksh(const char* dkshFile)
 {
 	DkshHeader hdr = {};
 	hdr.magic        = DKSH_MAGIC;
-	hdr.version      = 0;
+	hdr.header_sz    = sizeof(DkshHeader);
+	hdr.control_sz   = Align256(sizeof(DkshHeader) + sizeof(DkshProgramHeader));
+	hdr.code_sz      = Align256(m_dkph.entrypoint + m_codeSize); // TODO: add constbuf size
+	hdr.programs_off = sizeof(DkshHeader);
 	hdr.num_programs = 1;
-	hdr.module_sz    = m_dkph.entrypoint + m_codeSize; // TODO: add data segment
 
 	FILE* f = fopen(dkshFile, "wb");
 	if (f)
 	{
 		fwrite(&hdr, 1, sizeof(hdr), f);
+		fwrite(&m_dkph, 1, sizeof(m_dkph), f);
+		FileAlign256(f);
+
 		if (m_stage != pipeline_stage_compute)
-			fwrite(&m_nvsh, 1, sizeof(m_nvsh), f);
-		else
 		{
-			uint32_t req_padding = m_dkph.entrypoint - sizeof(hdr);
-			uint32_t dummy = 0xdeadf00d;
-			for (uint32_t i = 0; i < req_padding; i += 4)
-				fwrite(&dummy, 1, 4, f);
+			static const char s_padding[s_shaderStartOffset] = "lol nvidia why did you make us waste space here";
+			fwrite(s_padding, 1, sizeof(s_padding), f);
+			fwrite(&m_nvsh, 1, sizeof(m_nvsh), f);
 		}
 
 		fwrite(m_code, 1, m_codeSize, f);
 		// TODO: write data segment
+		FileAlign256(f);
 
-		fwrite(&m_dkph, 1, sizeof(m_dkph), f);
 		fclose(f);
 	}
 }
