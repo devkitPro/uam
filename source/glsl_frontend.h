@@ -20,5 +20,6 @@ void glsl_frontend_exit();
 
 glsl_program glsl_program_create(const char* source, pipeline_stage stage);
 const tgsi_token* glsl_program_get_tokens(glsl_program prg, unsigned int& num_tokens);
+void* glsl_program_get_constant_buffer(glsl_program prg, unsigned int& out_size);
 unsigned glsl_program_compute_get_shared_size(glsl_program prg);
 void glsl_program_free(glsl_program prg);

@@ -486,7 +486,17 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 		}
 
 		gl_program_parameter_list *pl = linked_shader->Program->Parameters;
+		/*
 		fprintf(stderr, "Const buffer size: 0x%x\n", 4*pl->NumParameterValues);
+		for (unsigned i = 0; i < pl->NumParameterValues; i += 4)
+		{
+			fprintf(stderr, "[0x%04x] 0x%08x 0x%08x 0x%08x 0x%08x\n", i*4,
+				pl->ParameterValues[i+0].u,
+				pl->ParameterValues[i+1].u,
+				pl->ParameterValues[i+2].u,
+				pl->ParameterValues[i+3].u);
+		}
+		*/
 		unsigned last_location = ~0U;
 		for (unsigned i = 0; i < pl->NumParameters; i ++)
 		{
@@ -517,24 +527,45 @@ _fail:
 	return NULL;
 }
 
-const tgsi_token* glsl_program_get_tokens(glsl_program prg, unsigned int& num_tokens)
+static struct gl_linked_shader *_glsl_program_get_linked_shader(glsl_program prg)
 {
 	struct gl_linked_shader *linked_shader = NULL;
 	for (int i = 0; !linked_shader && i < MESA_SHADER_STAGES; i ++)
 		linked_shader = prg->_LinkedShaders[i];
+	return linked_shader;
+}
+
+const tgsi_token* glsl_program_get_tokens(glsl_program prg, unsigned int& num_tokens)
+{
+	struct gl_linked_shader *linked_shader = _glsl_program_get_linked_shader(prg);
 	if (!linked_shader)
+	{
+		num_tokens = 0;
 		return NULL;
+	}
 
 	gl_program_with_tgsi* prog = gl_program_with_tgsi::from_ptr(linked_shader->Program);
 	num_tokens = prog->tgsi_num_tokens;
 	return prog->tgsi_tokens;
 }
 
+void* glsl_program_get_constant_buffer(glsl_program prg, unsigned int& out_size)
+{
+	struct gl_linked_shader *linked_shader = _glsl_program_get_linked_shader(prg);
+	if (!linked_shader)
+	{
+		out_size = 0;
+		return NULL;
+	}
+
+	gl_program_parameter_list *pl = linked_shader->Program->Parameters;
+	out_size = 4*pl->NumParameterValues;
+	return pl->ParameterValues;
+}
+
 unsigned glsl_program_compute_get_shared_size(glsl_program prg)
 {
-	struct gl_linked_shader *linked_shader = NULL;
-	for (int i = 0; !linked_shader && i < MESA_SHADER_STAGES; i ++)
-		linked_shader = prg->_LinkedShaders[i];
+	struct gl_linked_shader *linked_shader = _glsl_program_get_linked_shader(prg);
 	if (!linked_shader)
 		return 0;
 

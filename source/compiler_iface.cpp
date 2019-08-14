@@ -299,6 +299,7 @@ bool DekoCompiler::CompileGlsl(const char* glsl)
 		return false;
 	}
 
+	m_data = glsl_program_get_constant_buffer(m_glsl, m_dataSize);
 	RetrieveAndPadCode();
 	GenerateHeaders();
 	return true;
@@ -343,6 +344,12 @@ void DekoCompiler::GenerateHeaders()
 	m_dkph.entrypoint = m_stage != pipeline_stage_compute ? s_shaderStartOffset : 0;
 	m_dkph.num_gprs = m_info.bin.maxGPR + 1;
 	if (m_dkph.num_gprs < 4) m_dkph.num_gprs = 4;
+
+	if (m_dataSize)
+	{
+		m_dkph.constbuf1_off = Align256(m_dkph.entrypoint + m_codeSize);
+		m_dkph.constbuf1_sz  = m_dataSize;
+	}
 
 	unsigned local_pos_sz = (m_info.bin.tlsSpace + 0xF) &~ 0xF; // 16-byte aligned
 	unsigned local_neg_sz = 0;
@@ -597,7 +604,7 @@ void DekoCompiler::OutputDksh(const char* dkshFile)
 	hdr.magic        = DKSH_MAGIC;
 	hdr.header_sz    = sizeof(DkshHeader);
 	hdr.control_sz   = Align256(sizeof(DkshHeader) + sizeof(DkshProgramHeader));
-	hdr.code_sz      = Align256(m_dkph.entrypoint + m_codeSize); // TODO: add constbuf size
+	hdr.code_sz      = Align256(m_dkph.entrypoint + m_codeSize) + Align256(m_dataSize);
 	hdr.programs_off = sizeof(DkshHeader);
 	hdr.num_programs = 1;
 
@@ -616,8 +623,13 @@ void DekoCompiler::OutputDksh(const char* dkshFile)
 		}
 
 		fwrite(m_code, 1, m_codeSize, f);
-		// TODO: write data segment
 		FileAlign256(f);
+
+		if (m_dataSize)
+		{
+			fwrite(m_data, 1, m_dataSize, f);
+			FileAlign256(f);
+		}
 
 		fclose(f);
 	}
