@@ -246,7 +246,7 @@ DekoCompiler::DekoCompiler(pipeline_stage stage, int optLevel) :
 		case pipeline_stage_compute:
 			m_info.type = PIPE_SHADER_COMPUTE;
 			m_dkph.type = DkshProgramType_Compute;
-			resbase = 0x080;
+			resbase = 0x0a0;
 			break;
 	}
 	m_info.target = 0x12b;
@@ -260,7 +260,8 @@ DekoCompiler::DekoCompiler(pipeline_stage stage, int optLevel) :
 	m_info.io.texBindBase    = resbase+0x000; // Start of bound texture handles (32) + images (right after). 32-bit instead of 64-bit.
 	m_info.io.fbtexBindBase  = 0x00c;         // This is used for implementing TGSI_OPCODE_FBFETCH, itself used for KHR/NV_blend_equation_advanced and EXT_shader_framebuffer_fetch.
 	m_info.io.sampleInfoBase = 0x830;         // This is a LUT needed to implement gl_SamplePosition, it contains MSAA base sample positions.
-	m_info.io.uboInfoBase    = 0x000;         // Similar to bufInfoBase, but for UBOs. Compute shaders need this because there aren't enough hardware constbufs.
+	m_info.io.uboInfoBase    = 0x020;         // Similar to bufInfoBase, but for UBOs. Compute shaders need this because there aren't enough hardware constbufs.
+	m_info.prop.cp.gridInfoBase = 0x000;      // Compute dimension parameters (gl_LocalGroupSizeARB and gl_NumWorkGroups)
 
 	// The following fields are unused in our case, but are kept here for reference's sake:
 	//m_info.io.genUserClip  = prog->vp.num_ucps;             // This is used for old-style clip plane handling (gl_ClipVertex).
@@ -269,7 +270,6 @@ DekoCompiler::DekoCompiler(pipeline_stage stage, int optLevel) :
 	//m_info.io.msInfoBase   = NVC0_CB_AUX_MS_INFO;           // This points to a LUT used to calculate dx/dy from the sample id in NVC0LoweringPass::adjustCoordinatesMS. I replaced it with bitwise operations, so this is now unused.
 	//m_info.io.suInfoBase   = NVC0_CB_AUX_SU_INFO(0);        // Surface information. On Maxwell, nouveau only uses it during NVC0LoweringPass::processSurfaceCoordsGM107 bound checking (which I disabled)
 	//m_info.io.bindlessBase = NVC0_CB_AUX_BINDLESS_INFO(0);  // Like suInfoBase, but for bindless textures (pre-Kepler?).
-	//m_info.prop.cp.gridInfoBase = NVC0_CB_AUX_GRID_INFO(0); // This is the work_dim parameter from clEnqueueNDRangeKernel (OpenCL).
 
 	m_info.assignSlots = nvc0_program_assign_varying_slots;
 

@@ -2798,7 +2798,7 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
          // TGSI backend may use 4th component of TID,NTID,CTAID,NCTAID
          i->op = OP_MOV;
          i->setSrc(0, bld.mkImm((sv == SV_NTID || sv == SV_NCTAID) ? 1 : 0));
-      } else
+      } //else // fincs-edit: see below
       /* fincs-edit: NVC0+ has separate SR_TID.x/y/z regs. I don't know why this section is a thing at all.
       if (sv == SV_TID) {
          // Help CSE combine TID fetches
