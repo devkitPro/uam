@@ -1875,6 +1875,10 @@ NVC0LoweringPass::loadMsAdjInfo32(TexInstruction::Target target, uint32_t index,
       return loadSuInfo32(ind, slot, NVC0_SU_INFO_MS(index), bindless);
 
    //assert(bindless); // fincs-edit
+   if (!bindless && ind) {
+      bindless = true;
+      ind = loadTexHandle(ind, slot + 32);
+   }
 
    Value *samples = bld.getSSA();
    // this shouldn't be lowered because it's being inserted before the current instruction
@@ -2546,7 +2550,9 @@ NVC0LoweringPass::processSurfaceCoordsGM107(TexInstruction *su)
    }
    if (su->tex.bindless)
       handle = ind;
-   else
+   else if (ind) // fincs-edit
+      handle = loadTexHandle(ind, slot + 32);
+   else // fincs-edit
       handle = bld.mkImm(prog->driver->io.texBindBase/4 + slot + 32); // fincs-edit
    su->setSrc(arg + pos, handle);
 

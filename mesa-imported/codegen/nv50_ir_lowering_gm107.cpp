@@ -266,7 +266,7 @@ bool
 GM107LoweringPass::handleSUQ(TexInstruction *suq)
 {
    Value *ind = suq->getIndirectR();
-   Value *handle;
+   //Value *handle; // fincs-edit
    const int slot = suq->tex.r;
    const int mask = suq->tex.mask;
 
@@ -276,13 +276,18 @@ GM107LoweringPass::handleSUQ(TexInstruction *suq)
    else
       handle = loadTexHandle(ind, slot + 32);
    */
+   bool bindless = suq->tex.bindless;
+   if (!bindless && ind) {
+      bindless = true;
+      ind = loadTexHandle(ind, slot + 32);
+   }
 
-   suq->tex.r = suq->tex.bindless ? 0xff : (prog->driver->io.texBindBase/4 + slot + 32); // fincs-edit
+   suq->tex.r = bindless ? 0xff : (prog->driver->io.texBindBase/4 + slot + 32); // fincs-edit
    suq->tex.s = 0x1f;
 
    suq->setIndirectR(NULL);
-   suq->setSrc(0, suq->tex.bindless ? ind : bld.loadImm(NULL, 0)); // fincs-edit
-   suq->tex.rIndirectSrc = suq->tex.bindless ? 0 : -1; // fincs-edit
+   suq->setSrc(0, bindless ? ind : bld.loadImm(NULL, 0)); // fincs-edit
+   suq->tex.rIndirectSrc = bindless ? 0 : -1; // fincs-edit
    suq->setSrc(1, bld.loadImm(NULL, 0));
    suq->tex.query = TXQ_DIMS;
    suq->op = OP_TXQ;
@@ -322,11 +327,11 @@ GM107LoweringPass::handleSUQ(TexInstruction *suq)
 
       if (mask & 0x1)
          bld.mkOp2(OP_SHR, TYPE_U32, suq->getDef(0), suq->getDef(0),
-                   loadMsAdjInfo32(suq->tex.target, 0, slot, ind, suq->tex.bindless));
+                   loadMsAdjInfo32(suq->tex.target, 0, slot, ind, bindless));
       if (mask & 0x2) {
          int d = util_bitcount(mask & 0x1);
          bld.mkOp2(OP_SHR, TYPE_U32, suq->getDef(d), suq->getDef(d),
-                   loadMsAdjInfo32(suq->tex.target, 1, slot, ind, suq->tex.bindless));
+                   loadMsAdjInfo32(suq->tex.target, 1, slot, ind, bindless));
       }
    }
 
