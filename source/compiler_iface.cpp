@@ -347,7 +347,7 @@ void DekoCompiler::GenerateHeaders()
 
 	if (m_dataSize)
 	{
-		m_dkph.constbuf1_off = Align256(m_dkph.entrypoint + m_codeSize);
+		m_dkph.constbuf1_off = Align256((m_stage != pipeline_stage_compute ? 0x80 : 0x00) + m_codeSize);
 		m_dkph.constbuf1_sz  = m_dataSize;
 	}
 
