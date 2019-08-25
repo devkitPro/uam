@@ -138,6 +138,8 @@ struct nv50_ir_prog_info
       } gp;
       struct {
          unsigned numColourResults;
+         unsigned zcullTestMask; // fincs-edit
+         bool hasZcullTestMask; // fincs-edit
          bool writesDepth;
          bool earlyFragTests;
          bool postDepthCoverage;

@@ -1233,8 +1233,25 @@ void Source::scanProperty(const struct tgsi_full_property *prop)
       break;
    case TGSI_PROPERTY_FS_COORD_ORIGIN:
    case TGSI_PROPERTY_FS_COORD_PIXEL_CENTER:
-   case TGSI_PROPERTY_FS_DEPTH_LAYOUT:
       // we don't care
+      break;
+   case TGSI_PROPERTY_FS_DEPTH_LAYOUT: // fincs-edit (this entire section is new)
+      info->prop.fp.hasZcullTestMask = true;
+      switch (prop->u[0].Data) {
+         default:
+         case TGSI_FS_DEPTH_LAYOUT_ANY:
+            info->prop.fp.zcullTestMask = 0x11;
+            break;
+         case TGSI_FS_DEPTH_LAYOUT_GREATER:
+            info->prop.fp.zcullTestMask = 0x01;
+            break;
+         case TGSI_FS_DEPTH_LAYOUT_LESS:
+            info->prop.fp.zcullTestMask = 0x10;
+            break;
+         case TGSI_FS_DEPTH_LAYOUT_UNCHANGED:
+            info->prop.fp.zcullTestMask = 0x00;
+            break;
+      }
       break;
    case TGSI_PROPERTY_VS_PROHIBIT_UCPS:
       info->io.genUserClip = -1;

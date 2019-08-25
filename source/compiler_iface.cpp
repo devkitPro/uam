@@ -383,7 +383,7 @@ void DekoCompiler::GenerateHeaders()
 
 		if (m_stage == pipeline_stage_fragment)
 		{
-			if (m_info.prop.fp.numColourResults)
+			if (m_info.prop.fp.numColourResults > 1)
 				m_nvsh.mrt_enable = 1;
 			if (m_info.prop.fp.usesDiscard)
 				m_nvsh.kills_pixels = 1;
@@ -440,7 +440,10 @@ void DekoCompiler::GenerateHeaders()
 			//-----------------------------------------------------------------
 			m_dkph.frag.early_fragment_tests = m_info.prop.fp.earlyFragTests;
 			m_dkph.frag.post_depth_coverage  = m_info.prop.fp.postDepthCoverage;
-			// TODO: fill out more m_dkph.frag fields
+			m_dkph.frag.sample_shading       = m_info.prop.fp.usesSampleMaskIn || m_info.prop.fp.readsFramebuffer;
+			m_dkph.frag.param_d8             = 0x20164010; // ??
+			m_dkph.frag.param_65b            = m_info.prop.fp.hasZcullTestMask ? m_info.prop.fp.zcullTestMask : (m_info.prop.fp.writesDepth ? 0x11 : 0x00);
+			m_dkph.frag.param_489            = 0; // ??
 		}
 		else
 		{
