@@ -607,7 +607,7 @@ void DekoCompiler::OutputDksh(const char* dkshFile)
 	hdr.magic        = DKSH_MAGIC;
 	hdr.header_sz    = sizeof(DkshHeader);
 	hdr.control_sz   = Align256(sizeof(DkshHeader) + sizeof(DkshProgramHeader));
-	hdr.code_sz      = Align256(m_dkph.entrypoint + m_codeSize) + Align256(m_dataSize);
+	hdr.code_sz      = Align256((m_stage != pipeline_stage_compute ? 0x80 : 0x00) + m_codeSize) + Align256(m_dataSize);
 	hdr.programs_off = sizeof(DkshHeader);
 	hdr.num_programs = 1;
 
