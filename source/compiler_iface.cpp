@@ -383,7 +383,7 @@ void DekoCompiler::GenerateHeaders()
 
 		if (m_stage == pipeline_stage_fragment)
 		{
-			if (m_info.prop.fp.numColourResults > 1)
+			if (!m_info.prop.fp.separateFragData)
 				m_nvsh.mrt_enable = 1;
 			if (m_info.prop.fp.usesDiscard)
 				m_nvsh.kills_pixels = 1;
