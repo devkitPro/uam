@@ -1243,10 +1243,10 @@ void Source::scanProperty(const struct tgsi_full_property *prop)
             info->prop.fp.zcullTestMask = 0x11;
             break;
          case TGSI_FS_DEPTH_LAYOUT_GREATER:
-            info->prop.fp.zcullTestMask = 0x01;
+            info->prop.fp.zcullTestMask = 0x10;
             break;
          case TGSI_FS_DEPTH_LAYOUT_LESS:
-            info->prop.fp.zcullTestMask = 0x10;
+            info->prop.fp.zcullTestMask = 0x01;
             break;
          case TGSI_FS_DEPTH_LAYOUT_UNCHANGED:
             info->prop.fp.zcullTestMask = 0x00;

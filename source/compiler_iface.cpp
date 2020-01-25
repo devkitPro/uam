@@ -438,12 +438,20 @@ void DekoCompiler::GenerateHeaders()
 
 			// Miscellaneous
 			//-----------------------------------------------------------------
-			m_dkph.frag.early_fragment_tests = m_info.prop.fp.earlyFragTests;
-			m_dkph.frag.post_depth_coverage  = m_info.prop.fp.postDepthCoverage;
-			m_dkph.frag.sample_shading       = m_info.prop.fp.usesSampleMaskIn || m_info.prop.fp.readsFramebuffer;
-			m_dkph.frag.param_d8             = 0x20164010; // ??
-			m_dkph.frag.param_65b            = m_info.prop.fp.hasZcullTestMask ? m_info.prop.fp.zcullTestMask : (m_info.prop.fp.writesDepth ? 0x11 : 0x00);
-			m_dkph.frag.param_489            = 0; // ??
+			m_dkph.frag.early_fragment_tests  = m_info.prop.fp.earlyFragTests;
+			m_dkph.frag.post_depth_coverage   = m_info.prop.fp.postDepthCoverage;
+			m_dkph.frag.per_sample_invocation = m_info.prop.fp.persampleInvocation;
+			m_dkph.frag.param_65b             = m_info.prop.fp.hasZcullTestMask ? m_info.prop.fp.zcullTestMask : (m_info.prop.fp.writesDepth ? 0x11 : 0x00);
+			m_dkph.frag.param_489             = 0; // Fragment shader interlock layout (not supported by tgsi/nouveau anyway)
+			if (m_info.prop.fp.writesDepth)
+				m_dkph.frag.param_d8 = 0x087F6080;
+			/*else if (TODO: figure out what triggers this)
+				m_dkph.frag.param_d8 = 0x06164010;
+			*/
+			else if (m_info.prop.fp.numColourResults >= 3)
+				m_dkph.frag.param_d8 = 0x20806080;
+			else
+				m_dkph.frag.param_d8 = 0x087F6080;
 		}
 		else
 		{
