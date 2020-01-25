@@ -501,7 +501,7 @@ void DekoCompiler::GenerateHeaders()
 							m_dkph.tess_eval.param_c8 |= 1 << 4; // NVC0_3D_TESS_MODE_SPACING_FRACTIONAL_ODD
 							break;
 						case PIPE_TESS_SPACING_FRACTIONAL_EVEN:
-							m_dkph.tess_eval.param_c8 |= 1 << 4; // NVC0_3D_TESS_MODE_SPACING_FRACTIONAL_EVEN
+							m_dkph.tess_eval.param_c8 |= 2 << 4; // NVC0_3D_TESS_MODE_SPACING_FRACTIONAL_EVEN
 							break;
 					}
 					if (m_info.prop.tp.outputPrim != PIPE_PRIM_POINTS)
