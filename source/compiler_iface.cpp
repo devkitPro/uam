@@ -508,7 +508,7 @@ void DekoCompiler::GenerateHeaders()
 					{
 						if (m_info.prop.tp.domain == PIPE_PRIM_LINES)
 							m_dkph.tess_eval.param_c8 |= 1 << 8; // NVC0_3D_TESS_MODE_CW
-						else if (m_info.prop.tp.winding < 0) // counter-clockwise
+						else if (!m_info.prop.tp.winding) // counter-clockwise
 							m_dkph.tess_eval.param_c8 |= 2 << 8; // NVC0_3D_TESS_MODE_CONNECTED
 						else // clockwise
 							m_dkph.tess_eval.param_c8 |= 3 << 8; // NVC0_3D_TESS_MODE_CW|NVC0_3D_TESS_MODE_CONNECTED
