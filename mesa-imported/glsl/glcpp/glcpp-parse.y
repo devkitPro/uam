@@ -2340,6 +2340,7 @@ _glcpp_parser_handle_version_declaration(glcpp_parser_t *parser, intmax_t versio
    parser->version = version;
    parser->version_set = true;
 
+   add_builtin_define (parser, "DEKO3D", 100); // fincs-edit
    add_builtin_define (parser, "__VERSION__", version);
 
    parser->is_gles = (version == 100) ||
