@@ -486,18 +486,8 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 		}
 
 		gl_program_parameter_list *pl = linked_shader->Program->Parameters;
-		/*
-		fprintf(stderr, "Const buffer size: 0x%x\n", 4*pl->NumParameterValues);
-		for (unsigned i = 0; i < pl->NumParameterValues; i += 4)
-		{
-			fprintf(stderr, "[0x%04x] 0x%08x 0x%08x 0x%08x 0x%08x\n", i*4,
-				pl->ParameterValues[i+0].u,
-				pl->ParameterValues[i+1].u,
-				pl->ParameterValues[i+2].u,
-				pl->ParameterValues[i+3].u);
-		}
-		*/
 		unsigned last_location = ~0U;
+		bool has_uniforms_in_driver_cbuf = false;
 		for (unsigned i = 0; i < pl->NumParameters; i ++)
 		{
 			gl_program_parameter *p = &pl->Parameters[i];
@@ -510,14 +500,18 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 			if (location != last_location)
 			{
 				last_location = location;
-				fprintf(stderr, "Uniform %s (type=%d dim=%ux%u size=%u) at 0x%x\n",
+				fprintf(stderr, "error: uniform '%s' in driver constbuf (c[0x1][0x%03x]) not supported\n",
 					p->Name,
-					storage->type->base_type,
-					storage->type->matrix_columns, storage->type->vector_elements,
-					storage->array_elements,
+					// "(type=%d dim=%ux%u size=%u)"
+					//storage->type->base_type,
+					//storage->type->matrix_columns, storage->type->vector_elements,
+					//storage->array_elements,
 					4*pl->ParameterValueOffset[i]);
+				has_uniforms_in_driver_cbuf = true;
 			}
 		}
+		if (has_uniforms_in_driver_cbuf)
+			goto _fail;
 	}
 
 	return prg;
