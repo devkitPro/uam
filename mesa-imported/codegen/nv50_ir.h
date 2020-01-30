@@ -1312,6 +1312,8 @@ public:
 
    int maxGPR;
    bool fp64;
+   bool fp64_rcprsq; // fincs-addition
+   bool int_divmod; // fincs-addition
 
    MemoryPool mem_Instruction;
    MemoryPool mem_CmpInstruction;

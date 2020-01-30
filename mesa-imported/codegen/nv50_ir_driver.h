@@ -178,6 +178,8 @@ struct nv50_ir_prog_info
       uint8_t backFaceColor[2];  /* input/output indices of back face colour */
       uint8_t globalAccess;      /* 1 for read, 2 for wr, 3 for rw */
       bool fp64;                 /* program uses fp64 math */
+      bool fp64_rcprsq;          /* fincs-addition: program uses fp64 rcp/rsq */
+      bool int_divmod;           /* fincs-addition: program uses integer div/mod */
       bool mul_zero_wins;        /* program wants for x*0 = 0 */
       bool nv50styleSurfaces;    /* generate gX[] access for raw buffers */
       uint16_t texBindBase;      /* base address for tex handles (nve4) */

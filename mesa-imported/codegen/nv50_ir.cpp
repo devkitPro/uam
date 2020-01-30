@@ -1123,6 +1123,8 @@ Program::Program(Type type, Target *arch)
 
    maxGPR = -1;
    fp64 = false;
+   fp64_rcprsq = false; // fincs-addition
+   int_divmod = false; // fincs-addition
 
    main = new Function(this, "MAIN", ~0);
    calls.insert(&main->call);

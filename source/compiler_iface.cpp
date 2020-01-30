@@ -299,6 +299,11 @@ bool DekoCompiler::CompileGlsl(const char* glsl)
 		return false;
 	}
 
+	if (m_info.io.fp64_rcprsq)
+		fprintf(stderr, "warning: program uses 64-bit floating point reciprocal/square root, for which only a rough approximation with 20 bits of mantissa is supported by hardware\n");
+	if (m_info.io.int_divmod)
+		fprintf(stderr, "warning: program uses non-constant integer division/modulo, which is unsupported by hardware; floating point emulation with resulting loss of precision has been applied\n");
+
 	m_data = glsl_program_get_constant_buffer(m_glsl, m_dataSize);
 	RetrieveAndPadCode();
 	GenerateHeaders();

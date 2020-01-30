@@ -105,6 +105,7 @@ NVC0LegalizeSSA::handleDIV(Instruction *i)
    delete_Instruction(prog, i);
 #endif
 
+   prog->int_divmod = true;
    bld.setPosition(i, false);
    switch (i->op) {
    default:
@@ -173,6 +174,8 @@ NVC0LegalizeSSA::handleRCPRSQ(Instruction *i)
       return;
    }
    */
+   prog->fp64 = true;
+   prog->fp64_rcprsq = true;
 
    // 2. We don't care about the low 32 bits of the destination. Stick a 0 in.
    dst[0] = bld.loadImm(NULL, 0);
