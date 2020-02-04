@@ -36,7 +36,9 @@ if host_machine.system() != 'windows'
 	endforeach
 else
 	pre_args += [
+		'-mno-ms-bitfields',
 		'-Werror=format-extra-args',
+		'-D__STDC_FORMAT_MACROS',
 		'-D__USE_MINGW_ANSI_STDIO=1',
 	]
 endif
