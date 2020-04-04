@@ -26,9 +26,11 @@ pre_args = [
 	'-DPACKAGE_STRING="@0@ @1@"'.format(meson.project_name(), meson.project_version()),
 	'-DDESKTOP',
 	'-D_USE_MATH_DEFINES',
+	'-Werror=implicit-function-declaration',
 ]
 
 if host_machine.system() != 'windows'
+	pre_args += '-D_GNU_SOURCE'
 	foreach f : [ 'posix_memalign' ]
 		if compiler_c.has_function(f)
 			pre_args += '-DHAVE_@0@'.format(f.to_upper())
