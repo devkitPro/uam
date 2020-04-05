@@ -4534,7 +4534,7 @@ SchedDataCalculatorGM107::visit(BasicBlock *bb)
    }
    if (bb->cfg.outgoingCount() != 1)
       next = NULL;
-   setDelay(insn, bbDelay, next, !next || next->bb->cfg.incidentCount() != 1);
+   setDelay(insn, bbDelay, next, true);
    cycle += getStall(insn);
 
    score->rebase(cycle); // common base for initializing out blocks' scores
