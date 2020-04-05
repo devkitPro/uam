@@ -3843,7 +3843,7 @@ private:
 
    void commitInsn(const Instruction *, int);
    int calcDelay(const Instruction *, int) const;
-   void setDelay(Instruction *, int, const Instruction *, bool);
+   void setDelay(Instruction *, int, const Instruction *);
    void recordWr(const Value *, int, int);
    void checkRd(const Value *, int, int&) const;
 
@@ -4095,8 +4095,7 @@ SchedDataCalculatorGM107::calcDelay(const Instruction *insn, int cycle) const
 
 void
 SchedDataCalculatorGM107::setDelay(Instruction *insn, int delay,
-                                   const Instruction *next,
-                                   bool isOutgoing)
+                                   const Instruction *next)
 {
    const OpClass cl = targ->getOpClass(insn->op);
    int wr, rd;
@@ -4114,7 +4113,7 @@ SchedDataCalculatorGM107::setDelay(Instruction *insn, int delay,
       delay = 0xd;
    }
 
-   if (lastDualIssued || !next || delay > 1 || isOutgoing || !targ->canDualIssue(insn, next)) {
+   if (lastDualIssued || !next || delay > 1 || !targ->canDualIssue(insn, next)) {
       delay = CLAMP(delay, GM107_MIN_ISSUE_DELAY, GM107_MAX_ISSUE_DELAY);
       lastDualIssued = false;
    } else {
@@ -4479,7 +4478,7 @@ SchedDataCalculatorGM107::visit(BasicBlock *bb)
 
       commitInsn(insn, cycle);
       int delay = calcDelay(next, cycle);
-      setDelay(insn, delay, next, false);
+      setDelay(insn, delay, next);
       cycle += getStall(insn);
 
       setReuseFlag(insn);
@@ -4534,7 +4533,7 @@ SchedDataCalculatorGM107::visit(BasicBlock *bb)
    }
    if (bb->cfg.outgoingCount() != 1)
       next = NULL;
-   setDelay(insn, bbDelay, next, true);
+   setDelay(insn, bbDelay, next);
    cycle += getStall(insn);
 
    score->rebase(cycle); // common base for initializing out blocks' scores
