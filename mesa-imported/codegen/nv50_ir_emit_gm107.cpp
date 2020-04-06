@@ -4113,14 +4113,6 @@ SchedDataCalculatorGM107::setDelay(Instruction *insn, int delay,
       delay = 0xd;
    }
 
-   if (lastDualIssued || !next || delay > 1 || !targ->canDualIssue(insn, next)) {
-      delay = CLAMP(delay, GM107_MIN_ISSUE_DELAY, GM107_MAX_ISSUE_DELAY);
-      lastDualIssued = false;
-   } else {
-      delay = 0x0; // dual-issue
-      lastDualIssued = true;
-   }
-
    wr = getWrDepBar(insn);
    rd = getRdDepBar(insn);
 
@@ -4134,6 +4126,14 @@ SchedDataCalculatorGM107::setDelay(Instruction *insn, int delay,
          if ((wt & (1 << wr)) | (wt & (1 << rd)))
             delay = 0x2;
       }
+   }
+
+   if (lastDualIssued || !next || delay > 1 || !targ->canDualIssue(insn, next)) {
+      delay = CLAMP(delay, GM107_MIN_ISSUE_DELAY, GM107_MAX_ISSUE_DELAY);
+      lastDualIssued = false;
+   } else {
+      delay = 0x0; // dual-issue
+      lastDualIssued = true;
    }
 
    emitStall(insn, delay);
