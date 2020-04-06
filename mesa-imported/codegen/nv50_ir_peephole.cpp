@@ -3996,6 +3996,59 @@ DeadCodeElim::checkSplitLoad(Instruction *ld1)
 
 // =============================================================================
 
+// Tries to improve dual issueing trivially
+//
+// the PASS checks for every instruction A,B with A->next == B and
+// !canDualIssue(A,B), if there is a Instruction C in the same BB which can be
+// moved between A and B and canDualIssue(A,C) is true
+class PostRADualIssue : public Pass
+{
+private:
+   virtual bool visit(BasicBlock *);
+};
+
+static bool
+isChainedCommutationLegal(Instruction *a, Instruction *b)
+{
+   Instruction *it = b->prev;
+   do {
+      if (!it->isCommutationLegal(b))
+         return false;
+      it = it->prev;
+   } while (it != a);
+   return true;
+}
+
+bool
+PostRADualIssue::visit(BasicBlock *bb)
+{
+   const Target *target = prog->getTarget();
+   Instruction *i, *next, *check;
+
+   for (i = bb->getEntry(); i; i = next) {
+      next = i->next;
+
+      if (!next || next->fixed || next->join || next->asFlow() || target->canDualIssue(i, next))
+         continue;
+
+      for (check = next->next; check; check = check->next) {
+         // we can't move fixed, flow instructions and instruction marked as join
+         if (!check || check->fixed || check->join || check->asFlow())
+            break;
+
+         if (isChainedCommutationLegal(i, check) && target->canDualIssue(i, check)) {
+            while (check->prev != i)
+               bb->permuteAdjacent(check->prev, check);
+            next = check;
+            break;
+         }
+      }
+   }
+   return true;
+}
+
+// =============================================================================
+
 #define RUN_PASS(l, n, f)                       \
    if (level >= (l)) {                          \
       if (dbgFlags & NV50_IR_DEBUG_VERBOSE)     \
@@ -4032,6 +4085,7 @@ Program::optimizePostRA(int level)
 {
    RUN_PASS(2, FlatteningPass, run);
    RUN_PASS(2, PostRaLoadPropagation, run);
+   RUN_PASS(2, PostRADualIssue, run);
 
    return true;
 }
