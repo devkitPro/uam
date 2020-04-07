@@ -278,7 +278,7 @@ getDualIssueClass(const Instruction *insn)
    case OP_QUADPOP:
    case OP_BAR:
    case OP_CCTL:
-   case OP_VOTE:
+   //case OP_VOTE: // this one seems to be ALU
    case OP_SHFL: // maxas says this is smem but I don't believe it
       return UNCLASSIFIED;
 
@@ -297,29 +297,8 @@ TargetGM107::canDualIssue(const Instruction *a, const Instruction *b) const
    DualIssueClass ac = getDualIssueClass(a);
    DualIssueClass bc = getDualIssueClass(b);
 
-   if (ac == UNCLASSIFIED || bc == UNCLASSIFIED)
-      return false;
-
-   if (ac == bc)
-      return false;
-
-   /* Hunch: variable-latency opcodes cannot be the first instruction in a dual issue */
-   if (isBarrierRequired(a))
-      return false;
-
-   /* maxas suggest we can't dual issue if both load immediates */
-   bool hasImm = false;
-
-   for (int i = 0; a->srcExists(i); ++i)
-      if (a->getSrc(i)->inFile(FILE_IMMEDIATE))
-         hasImm = true;
-
-   if (hasImm)
-      for (int i = 0; b->srcExists(i); ++i)
-         if (b->getSrc(i)->inFile(FILE_IMMEDIATE))
-            return false;
-
-   return true;
+   // Dual issue is allowed if the first instruction is ALU, and the second is not
+   return ac == ALU && bc != ALU;
 }
 
 // Return the number of stall counts needed to complete a single instruction.
