@@ -181,6 +181,7 @@ struct nv50_ir_prog_info
       bool fp64_rcprsq;          /* fincs-addition: program uses fp64 rcp/rsq */
       bool int_divmod;           /* fincs-addition: program uses integer div/mod */
       bool mul_zero_wins;        /* program wants for x*0 = 0 */
+      bool layer_viewport_relative;
       bool nv50styleSurfaces;    /* generate gX[] access for raw buffers */
       uint16_t texBindBase;      /* base address for tex handles (nve4) */
       uint16_t fbtexBindBase;    /* base address for fbtex handle (nve4) */

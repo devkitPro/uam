@@ -144,6 +144,9 @@ typedef struct shader_info {
    /** Was this shader linked with any transform feedback varyings? */
    bool has_transform_feedback_varyings;
 
+   /* Whether gl_Layer is viewport-relative */
+   bool layer_viewport_relative:1;
+
    union {
       struct {
          /* Which inputs are doubles */

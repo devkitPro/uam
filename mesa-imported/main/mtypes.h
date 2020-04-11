@@ -103,6 +103,7 @@ _mesa_varying_slot_in_fs(gl_varying_slot slot)
    case VARYING_SLOT_TESS_LEVEL_INNER:
    case VARYING_SLOT_BOUNDING_BOX0:
    case VARYING_SLOT_BOUNDING_BOX1:
+   case VARYING_SLOT_VIEWPORT_MASK:
       return GL_FALSE;
    default:
       return GL_TRUE;
@@ -2652,6 +2653,12 @@ struct gl_shader
    bool bound_sampler;
    bool bound_image;
 
+   /**
+    * Whether layer output is viewport-relative.
+    */
+   bool redeclares_gl_layer;
+   bool layer_viewport_relative;
+
    /** Global xfb_stride out qualifier if any */
    GLuint TransformFeedbackBufferStride[MAX_FEEDBACK_BUFFERS];
 
@@ -4339,6 +4346,7 @@ struct gl_extensions
    GLboolean NV_conservative_raster_dilate;
    GLboolean NV_conservative_raster_pre_snap_triangles;
    GLboolean NV_conservative_raster_pre_snap;
+   GLboolean NV_viewport_array2;
    GLboolean NVX_gpu_memory_info;
    GLboolean TDFX_texture_compression_FXT1;
    GLboolean OES_EGL_image;

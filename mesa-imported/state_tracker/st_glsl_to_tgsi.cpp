@@ -4288,7 +4288,7 @@ glsl_to_tgsi_visitor::canonicalize_gather_offset(st_src_reg offset)
 
    return offset;
 }
- 
+
 bool
 glsl_to_tgsi_visitor::handle_bound_deref(ir_dereference *ir)
 {
@@ -6917,6 +6917,9 @@ st_translate_program(
    if (procType == PIPE_SHADER_COMPUTE) {
       emit_compute_block_size(proginfo, ureg);
    }
+
+   if (program->shader->Program->info.layer_viewport_relative)
+      ureg_property(ureg, TGSI_PROPERTY_LAYER_VIEWPORT_RELATIVE, 1);
 
    /* Declare address register.
     */

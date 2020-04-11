@@ -289,6 +289,8 @@ void initialize_context_to_defaults(struct gl_context *ctx, gl_api api)
    ctx->Extensions.ARB_shader_group_vote = GL_TRUE;
    ctx->Extensions.ARB_shader_ballot = GL_TRUE;
    ctx->Extensions.ARB_shader_atomic_counter_ops = GL_TRUE;
+   ctx->Extensions.ARB_shader_viewport_layer_array = GL_TRUE;
+   ctx->Extensions.NV_viewport_array2 = GL_TRUE;
 
    // Compute
    ctx->Extensions.ARB_compute_shader = GL_TRUE;

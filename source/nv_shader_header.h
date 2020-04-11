@@ -89,7 +89,11 @@ struct NvShaderHeader
 	uint32_t kills_pixels         : 1;
 	uint32_t does_global_store    : 1;
 	uint32_t sass_version         : 4;
-	uint32_t _reserved0           : 5;
+	uint32_t _reserved0_1         : 1;
+	uint32_t _reserved0_2         : 1;
+	uint32_t _reserved0_3         : 1;
+	uint32_t is_fast_gs           : 1;
+	uint32_t vsh_unk_flag         : 1;
 	uint32_t does_load_or_store   : 1;
 	uint32_t does_fp64            : 1;
 	uint32_t stream_out_mask      : 4;
@@ -130,7 +134,7 @@ struct NvShaderHeader
 			uint16_t omap_color;
 			uint16_t omap_sysvals_c;
 			uint8_t  omap_fixed_fnc_tex[5];
-			uint8_t  _reserved1;
+			uint8_t  omap_extra;
 		} __attribute__((packed)) vtg;
 
 		struct
@@ -217,6 +221,8 @@ struct NvShaderHeader
 			SetVtgOmapSysval(idx);
 		else if (_CheckAndRemap(idx, NvAttrib_FixedFncTex(0), NvAttrib_FixedFncTex(9)+0xc, 0))
 			vtg.omap_fixed_fnc_tex[idx/8] |= 1u << (idx&7);
+		else if (idx == NvAttrib_ViewportMask)
+			vtg.omap_extra |= 1;
 	}
 
 	void SetPsImap(unsigned idx, unsigned interp = NvPixelImap_Constant)

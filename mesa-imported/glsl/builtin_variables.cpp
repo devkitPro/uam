@@ -1026,14 +1026,30 @@ builtin_variable_generator::generate_vs_special_vars()
       add_system_value(SYSTEM_VALUE_DRAW_ID, int_t, "gl_DrawIDARB");
    }
    if (state->AMD_vertex_shader_layer_enable ||
-       state->ARB_shader_viewport_layer_array_enable) {
+       state->ARB_shader_viewport_layer_array_enable ||
+       state->NV_viewport_array2_enable) {
       var = add_output(VARYING_SLOT_LAYER, int_t, "gl_Layer");
       var->data.interpolation = INTERP_MODE_FLAT;
    }
    if (state->AMD_vertex_shader_viewport_index_enable ||
-       state->ARB_shader_viewport_layer_array_enable) {
+       state->ARB_shader_viewport_layer_array_enable ||
+       state->NV_viewport_array2_enable) {
       var = add_output(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
       var->data.interpolation = INTERP_MODE_FLAT;
+   }
+   if (state->NV_viewport_array2_enable) {
+      /* From the NV_viewport_array2 specification:
+       *
+       *    "The variable gl_ViewportMask[] is available as an output variable
+       *    in the VTG languages. The array has ceil(v/32) elements where v is
+       *    the maximum number of viewports supported by the implementation."
+       *
+       * Since no drivers expose more than 16 viewports, we can simply set the
+       * array size to 1 rather than computing it and dealing with varying
+       * slot complication.
+       */
+      var = add_output(VARYING_SLOT_VIEWPORT_MASK, array(int_t, 1),
+                       "gl_ViewportMask");
    }
    if (compatibility) {
       add_input(VERT_ATTRIB_POS, vec4_t, "gl_Vertex");
@@ -1079,6 +1095,16 @@ builtin_variable_generator::generate_tcs_special_vars()
    if (state->is_version(0, 320) || state->ARB_ES3_2_compatibility_enable)
       add_output(bbox_slot, array(vec4_t, 2), "gl_BoundingBox")
          ->data.patch = 1;
+
+   /* NOTE: These are completely pointless. Writing these will never go
+    * anywhere. But the specs demands it. So we add them with a slot of -1,
+    * which makes the data go nowhere.
+    */
+   if (state->NV_viewport_array2_enable) {
+      add_output(-1, int_t, "gl_Layer");
+      add_output(-1, int_t, "gl_ViewportIndex");
+      add_output(-1, array(int_t, 1), "gl_ViewportMask");
+   }
 }
 
 
@@ -1104,11 +1130,16 @@ builtin_variable_generator::generate_tes_special_vars()
       add_system_value(SYSTEM_VALUE_TESS_LEVEL_INNER, array(float_t, 2),
                        "gl_TessLevelInner");
    }
-   if (state->ARB_shader_viewport_layer_array_enable) {
+   if (state->ARB_shader_viewport_layer_array_enable ||
+       state->NV_viewport_array2_enable) {
       var = add_output(VARYING_SLOT_LAYER, int_t, "gl_Layer");
       var->data.interpolation = INTERP_MODE_FLAT;
       var = add_output(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
       var->data.interpolation = INTERP_MODE_FLAT;
+   }
+   if (state->NV_viewport_array2_enable) {
+      var = add_output(VARYING_SLOT_VIEWPORT_MASK, array(int_t, 1),
+                       "gl_ViewportMask");
    }
 }
 
@@ -1127,6 +1158,10 @@ builtin_variable_generator::generate_gs_special_vars()
        state->OES_viewport_array_enable) {
       var = add_output(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
       var->data.interpolation = INTERP_MODE_FLAT;
+   }
+   if (state->NV_viewport_array2_enable) {
+      var = add_output(VARYING_SLOT_VIEWPORT_MASK, array(int_t, 1),
+                       "gl_ViewportMask");
    }
    if (state->is_version(400, 320) || state->ARB_gpu_shader5_enable ||
        state->OES_geometry_shader_enable || state->EXT_geometry_shader_enable) {
@@ -1252,14 +1287,16 @@ builtin_variable_generator::generate_fs_special_vars()
    if (state->is_version(430, 320) ||
        state->ARB_fragment_layer_viewport_enable ||
        state->OES_geometry_shader_enable ||
-       state->EXT_geometry_shader_enable) {
+       state->EXT_geometry_shader_enable ||
+       state->NV_viewport_array2_enable) {
       var = add_input(VARYING_SLOT_LAYER, int_t, "gl_Layer");
       var->data.interpolation = INTERP_MODE_FLAT;
    }
 
    if (state->is_version(430, 0) ||
        state->ARB_fragment_layer_viewport_enable ||
-       state->OES_viewport_array_enable) {
+       state->OES_viewport_array_enable ||
+       state->NV_viewport_array2_enable) {
       var = add_input(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
       var->data.interpolation = INTERP_MODE_FLAT;
    }

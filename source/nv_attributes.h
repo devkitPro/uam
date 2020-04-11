@@ -31,6 +31,7 @@ enum
 	NvAttrib_InstanceId     = 0x2f8,
 	NvAttrib_VertexId       = 0x2fc,
 	NvAttrib_FixedFncTexN   = 0x300, // vec4[10]
+	NvAttrib_ViewportMask   = 0x3a0,
 };
 
 #define NvAttrib_TessOuter(_n)    (NvAttrib_TessLodLeft   +    4*(_n))

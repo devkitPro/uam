@@ -79,7 +79,7 @@ nvc0_shader_output_address(unsigned sn, unsigned si)
 	case TGSI_SEMANTIC_CLIPDIST:      return NvAttrib_ClipDistance(4*si); // TGSI treats this field as vec4[2] instead of float[8]
 	case TGSI_SEMANTIC_CLIPVERTEX:    return NvAttrib_Generic(31);
 	case TGSI_SEMANTIC_TEXCOORD:      return NvAttrib_FixedFncTex(si);
-	/* case TGSI_SEMANTIC_VIEWPORT_MASK: return 0x3a0; */
+	case TGSI_SEMANTIC_VIEWPORT_MASK: return NvAttrib_ViewportMask;
 	case TGSI_SEMANTIC_EDGEFLAG:      return ~0;
 	default:
 		assert(!"invalid TGSI output semantic");
@@ -464,7 +464,8 @@ void DekoCompiler::GenerateHeaders()
 			{
 				default:
 				case pipeline_stage_vertex:
-					break; // Nothing to do here
+					m_nvsh.vsh_unk_flag = 1;
+					break;
 
 				case pipeline_stage_tess_ctrl:
 				{
@@ -550,6 +551,7 @@ void DekoCompiler::GenerateHeaders()
 							break;
 					}
 
+					m_dkph.geom.flag_47c = m_info.io.layer_viewport_relative;
 					break;
 				}
 			}
