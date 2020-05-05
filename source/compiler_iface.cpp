@@ -464,7 +464,7 @@ void DekoCompiler::GenerateHeaders()
 			{
 				default:
 				case pipeline_stage_vertex:
-					m_nvsh.vsh_unk_flag = 1;
+					//m_nvsh.vsh_unk_flag = 1;
 					break;
 
 				case pipeline_stage_tess_ctrl:
