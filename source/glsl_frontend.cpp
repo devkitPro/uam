@@ -19,6 +19,7 @@
 #include "state_tracker/st_glsl_to_tgsi.h"
 #include "tgsi/tgsi_from_mesa.h"
 #include "glsl/ir_uniform.h"
+#include "pipe/p_state.h"
 
 extern "C"
 {
@@ -88,6 +89,7 @@ struct gl_program_with_tgsi : public gl_program
 	struct glsl_to_tgsi_visitor *glsl_to_tgsi;
 	const tgsi_token *tgsi_tokens;
 	unsigned int tgsi_num_tokens;
+	int8_t vtx_in_locations[PIPE_MAX_ATTRIBS];
 
 	void cleanup()
 	{
@@ -341,7 +343,7 @@ void glsl_frontend_exit()
 }
 
 // Prototypes for translation functions
-bool tgsi_translate_vertex(struct gl_context *ctx, struct gl_program *prog);
+bool tgsi_translate_vertex(struct gl_context *ctx, struct gl_program *prog, int8_t *out_inlocations);
 bool tgsi_translate_tessctrl(struct gl_context *ctx, struct gl_program *prog);
 bool tgsi_translate_tesseval(struct gl_context *ctx, struct gl_program *prog);
 bool tgsi_translate_geometry(struct gl_context *ctx, struct gl_program *prog);
@@ -457,7 +459,8 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 		switch (stage)
 		{
 			case pipeline_stage_vertex:
-				rc = tgsi_translate_vertex(&gl_ctx, linked_shader->Program);
+				rc = tgsi_translate_vertex(&gl_ctx, linked_shader->Program,
+					gl_program_with_tgsi::from_ptr(linked_shader->Program)->vtx_in_locations);
 				break;
 			case pipeline_stage_tess_ctrl:
 				rc = tgsi_translate_tessctrl(&gl_ctx, linked_shader->Program);
@@ -555,6 +558,15 @@ void* glsl_program_get_constant_buffer(glsl_program prg, unsigned int& out_size)
 	gl_program_parameter_list *pl = linked_shader->Program->Parameters;
 	out_size = 4*pl->NumParameterValues;
 	return pl->ParameterValues;
+}
+
+int8_t const* glsl_program_vertex_get_in_locations(glsl_program prg)
+{
+	struct gl_linked_shader *linked_shader = _glsl_program_get_linked_shader(prg);
+	if (!linked_shader)
+		return nullptr;
+
+	return gl_program_with_tgsi::from_ptr(linked_shader->Program)->vtx_in_locations;
 }
 
 unsigned glsl_program_compute_get_shared_size(glsl_program prg)

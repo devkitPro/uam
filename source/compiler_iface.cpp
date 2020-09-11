@@ -90,9 +90,11 @@ nvc0_shader_output_address(unsigned sn, unsigned si)
 static int
 nvc0_vp_assign_input_slots(struct nv50_ir_prog_info *info)
 {
-	unsigned i, c, n;
+	unsigned i, c;
 
-	for (n = 0, i = 0; i < info->numInputs; ++i) {
+	int8_t const* in_locations = glsl_program_vertex_get_in_locations((glsl_program)info->driverPriv);
+
+	for (i = 0; i < info->numInputs; ++i) {
 		switch (info->in[i].sn) {
 		case TGSI_SEMANTIC_INSTANCEID: /* for SM4 only, in TGSI they're SVs */
 		case TGSI_SEMANTIC_VERTEXID:
@@ -103,9 +105,12 @@ nvc0_vp_assign_input_slots(struct nv50_ir_prog_info *info)
 		default:
 			break;
 		}
-		for (c = 0; c < 4; ++c)
-			info->in[i].slot[c] = (NvAttrib_Generic(n) + c * 0x4) / 4;
-		++n;
+
+		int8_t location = in_locations[info->in[i].si];
+		if (location >= 0) {
+			for (c = 0; c < 4; ++c)
+				info->in[i].slot[c] = (NvAttrib_Generic(location) + c * 0x4) / 4;
+		}
 	}
 
 	return 0;
@@ -292,6 +297,7 @@ bool DekoCompiler::CompileGlsl(const char* glsl)
 	m_tgsi = glsl_program_get_tokens(m_glsl, m_tgsiNumTokens);
 	m_info.bin.source = m_tgsi;
 	m_info.bin.smemSize = glsl_program_compute_get_shared_size(m_glsl); // Total size of glsl shared variables. (translation process doesn't actually need this, but for the sake of consistency with nouveau, we keep this value here too)
+	m_info.driverPriv = m_glsl;
 	int ret = nv50_ir_generate_code(&m_info);
 	if (ret < 0)
 	{

@@ -46,7 +46,7 @@ static bool tgsi_attach_to_program(struct gl_program *prog, struct ureg_program 
 }
 
 // Based off st_translate_vertex_program
-bool tgsi_translate_vertex(struct gl_context *ctx, struct gl_program *prog)
+bool tgsi_translate_vertex(struct gl_context *ctx, struct gl_program *prog, int8_t *out_inlocations)
 {
 	unsigned num_outputs = 0;
 	unsigned attr;
@@ -81,6 +81,22 @@ bool tgsi_translate_vertex(struct gl_context *ctx, struct gl_program *prog)
 	// bit of a hack, presetup potentially unused edgeflag input
 	input_to_index[VERT_ATTRIB_EDGEFLAG] = num_inputs;
 	index_to_input[num_inputs] = VERT_ATTRIB_EDGEFLAG;
+
+	if (out_inlocations) {
+		for (unsigned i = 0; i < PIPE_MAX_ATTRIBS; i ++) {
+			int8_t location = -1;
+			if (i < num_inputs) {
+				ubyte attr = index_to_input[i];
+				if (attr == ST_DOUBLE_ATTRIB_PLACEHOLDER) {
+					attr = index_to_input[i-1] + 1;
+				}
+				if (attr >= VERT_ATTRIB_GENERIC0) {
+					location = attr - VERT_ATTRIB_GENERIC0;
+				}
+			}
+			out_inlocations[i] = location;
+		}
+	}
 
 	// Compute mapping of vertex program outputs to slots.
 	for (attr = 0; attr < VARYING_SLOT_MAX; attr++) {
