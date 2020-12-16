@@ -30,7 +30,7 @@ UAM is based on [mesa](https://www.mesa3d.org/)'s GLSL parser and TGSI infrastru
 - There is no concept of shader linking. Separable programs (`ARB_separate_shader_objects`) are always in effect.
 - The compiler is based on mesa 19.0.8 sources; however several cherrypicked bugfixes from mesa 19.1 and up have been applied.
 - Numerous codegen differences:
-	- Added **Maxwell dual issue** scheduling support based on the groundwork laid out by karolherbst's [dual_issue_v2](https://github.com/karolherbst/mesa/commits/dual_issue_v2) branch, and enhanced with new experimental findings.
+	- Added **Maxwell dual issue** scheduling support based on the groundwork laid out by karolherbst's [dual_issue_v3](https://github.com/karolherbst/mesa/commits/dual_issue_v3) branch, and enhanced with new experimental findings.
 	- Removed bound checks in SSBO accesses.
 	- Removed bound checks in atomic accesses.
 	- Removed bound checks in image accesses.
@@ -38,7 +38,6 @@ UAM is based on [mesa](https://www.mesa3d.org/)'s GLSL parser and TGSI infrastru
 	- Multisampled image operations use `TXQ` instead of requiring helper data in the driver constbuf.
 	- Non-bindless image operations are supported natively instead of being emulated with bindless operations.
 	- SSBO size calculations use unsigned math instead of signed math, which results in better codegen.
-	- Added codegen support for `SR_TID.x/y/z`, which replaces `SV_COMBINED_TID` (used to implement `gl_LocalInvocationID`).
 	- `ballotARB()` called with a constant argument now results in optimal codegen using the PT predicate register.
 	- **Bugfixes**:
 		- Bindless texture queries were broken.

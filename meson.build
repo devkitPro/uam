@@ -1,6 +1,6 @@
 
 project('uam', ['c', 'cpp'],
-	version: '1.0.0',
+	version: '1.1.0',
 	default_options: [ 'buildtype=release', 'strip=true', 'b_ndebug=if-release', 'c_std=c99', 'cpp_std=c++11' ],
 )
 
