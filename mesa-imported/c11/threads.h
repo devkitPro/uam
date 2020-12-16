@@ -4,9 +4,9 @@
 
 typedef int mtx_t;
 
-#define mtx_init(...) ((void)0)
-#define mtx_destroy(...) ((void)0)
-#define mtx_lock(...) ((void)0)
-#define mtx_unlock(...) ((void)0)
+#define mtx_init(_m,...) ((void)(_m))
+#define mtx_destroy(_m,...) ((void)(_m))
+#define mtx_lock(_m,...) ((void)(_m))
+#define mtx_unlock(_m,...) ((void)(_m))
 
 #define _MTX_INITIALIZER_NP 0

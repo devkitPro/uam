@@ -71,7 +71,7 @@
  * Unreachable macro. Useful for suppressing "control reaches end of non-void
  * function" warnings.
  */
-#ifdef HAVE___BUILTIN_UNREACHABLE
+#if defined(__GNUC__)
 #define unreachable(str)    \
 do {                        \
    assert(!str);            \
@@ -152,7 +152,7 @@ do {                       \
  * packed, to trade off performance for space.
  */
 #ifndef PACKED
-#ifdef HAVE_FUNC_ATTRIBUTE_PACKED
+#if defined(__GNUC__)
 #define PACKED __attribute__((__packed__))
 #else
 #define PACKED
@@ -162,13 +162,13 @@ do {                       \
 /* Attribute pure is used for functions that have no effects other than their
  * return value.  As a result, calls to it can be dead code eliminated.
  */
-#ifdef HAVE_FUNC_ATTRIBUTE_PURE
+#if defined(__GNUC__)
 #define ATTRIBUTE_PURE __attribute__((__pure__))
 #else
 #define ATTRIBUTE_PURE
 #endif
 
-#ifdef HAVE_FUNC_ATTRIBUTE_RETURNS_NONNULL
+#if defined(__GNUC__)
 #define ATTRIBUTE_RETURNS_NONNULL __attribute__((__returns_nonnull__))
 #else
 #define ATTRIBUTE_RETURNS_NONNULL
@@ -177,7 +177,7 @@ do {                       \
 #ifndef NORETURN
 #  ifdef _MSC_VER
 #    define NORETURN __declspec(noreturn)
-#  elif defined HAVE_FUNC_ATTRIBUTE_NORETURN
+#  elif defined(__GNUC__)
 #    define NORETURN __attribute__((__noreturn__))
 #  else
 #    define NORETURN
@@ -232,7 +232,7 @@ do {                       \
 #  endif
 #endif
 
-#ifdef HAVE_FUNC_ATTRIBUTE_UNUSED
+#if defined(__GNUC__)
 #define UNUSED __attribute__((unused))
 #else
 #define UNUSED
@@ -240,7 +240,7 @@ do {                       \
 
 #define MAYBE_UNUSED UNUSED
 
-#ifdef HAVE_FUNC_ATTRIBUTE_WARN_UNUSED_RESULT
+#if defined(__GNUC__)
 #define MUST_CHECK __attribute__((warn_unused_result))
 #else
 #define MUST_CHECK

@@ -26,7 +26,6 @@ pre_args = [
 	'-DPACKAGE_STRING="@0@ @1@"'.format(meson.project_name(), meson.project_version()),
 	'-DDESKTOP',
 	'-D_USE_MATH_DEFINES',
-	'-Werror=implicit-function-declaration',
 ]
 
 if host_machine.system() != 'windows'
@@ -53,6 +52,12 @@ endforeach
 
 foreach a : pre_args
 	add_project_arguments(a, language : ['c', 'cpp'])
+endforeach
+
+foreach a : [ '-Werror=implicit-function-declaration' ]
+	if compiler_c.has_argument(a)
+		add_project_arguments(a, language : 'c')
+	endif
 endforeach
 
 foreach a : [ '-Wno-class-memaccess', '-Wno-non-virtual-dtor' ]

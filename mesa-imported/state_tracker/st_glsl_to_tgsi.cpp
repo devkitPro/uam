@@ -2505,7 +2505,7 @@ glsl_to_tgsi_visitor::visit(ir_swizzle *ir)
 {
    st_src_reg src;
    int i;
-   int swizzle[4];
+   int swizzle[4] = {0}; // fincs-edit
 
    /* Note that this is only swizzles in expressions, not those on the left
     * hand side of an assignment, which do write masking.  See ir_assignment
@@ -6367,6 +6367,7 @@ compile_tgsi_instruction(struct st_translate *t,
    }
 }
 
+#if 0 // fincs-edit
 /* Invert SamplePos.y when rendering to the default framebuffer. */
 static void
 emit_samplepos_adjustment(struct st_translate *t, int wpos_y_transform)
@@ -6581,6 +6582,7 @@ emit_wpos(struct gl_context *ctx, // fincs-edit
     * and reuse the adjustment ADD instead */
    emit_wpos_adjustment(ctx, t, wpos_transform_const, invert, adjX, adjY); // fincs-edit
 }
+#endif // fincs-edit
 
 /**
  * OpenGL's fragment gl_FrontFace input is 1 for front-facing, 0 for back.
@@ -7574,7 +7576,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       if (shader == NULL)
          continue;
 
-      struct gl_program *linked_prog =
+      //struct gl_program *linked_prog = // fincs-edit
          get_mesa_program_tgsi(ctx, prog, shader);
       //st_set_prog_affected_state_flags(linked_prog); // fincs-edit
 
