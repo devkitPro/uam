@@ -39,6 +39,7 @@ public:
 
 	bool CompileGlsl(const char* glsl);
 	void OutputDksh(const char* dkshFile);
+	void OutputDkshToMemory(void *buffer, uint32_t *size);
 	void OutputRawCode(const char* rawFile);
 	void OutputTgsi(const char* tgsiFile);
 };
