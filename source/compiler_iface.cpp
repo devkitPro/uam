@@ -659,6 +659,45 @@ void DekoCompiler::OutputDksh(const char* dkshFile)
 	}
 }
 
+void DekoCompiler::OutputDkshToMemory(void *buffer, uint32_t *size)
+{
+	uint32_t offset = 0;
+
+	DkshHeader hdr = {};
+	hdr.magic        = DKSH_MAGIC;
+	hdr.header_sz    = sizeof(DkshHeader);
+	hdr.control_sz   = Align256(sizeof(DkshHeader) + sizeof(DkshProgramHeader));
+	hdr.code_sz      = Align256((m_stage != pipeline_stage_compute ? 0x80 : 0x00) + m_codeSize) + Align256(m_dataSize);
+	hdr.programs_off = sizeof(DkshHeader);
+	hdr.num_programs = 1;
+
+	memcpy((char *)buffer + offset, &hdr, sizeof(hdr));
+	offset += sizeof(hdr);
+	memcpy((char *)buffer + offset, &m_dkph, sizeof(m_dkph));
+	offset = Align256(offset + sizeof(m_dkph));
+
+	if (m_stage != pipeline_stage_compute)
+	{
+		static const char s_padding[s_shaderStartOffset] = "lol nvidia why did you make us waste space here";
+		memcpy((char *)buffer + offset, s_padding, sizeof(s_padding));
+		offset += sizeof(s_padding);
+		memcpy((char *)buffer + offset, &m_nvsh, sizeof(m_nvsh));
+		offset += sizeof(m_nvsh);
+	}
+
+	memcpy((char *)buffer + offset, m_code, m_codeSize);
+	offset = Align256(offset + m_codeSize);
+
+	if (m_dataSize)
+	{
+		memcpy((char *)buffer + offset, m_data, m_dataSize);
+		offset = Align256(offset + m_dataSize);
+	}
+
+	if (size)
+		*size = offset;
+}
+
 void DekoCompiler::OutputRawCode(const char* rawFile)
 {
 	FILE* f = fopen(rawFile, "wb");
