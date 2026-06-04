@@ -4085,7 +4085,27 @@ Program::optimizePostRA(int level)
 {
    RUN_PASS(2, FlatteningPass, run);
    RUN_PASS(2, PostRaLoadPropagation, run);
-   RUN_PASS(2, PostRADualIssue, run);
+   /* PostRADualIssue is intentionally disabled: it miscompiles on Maxwell.
+    *
+    * This experimental post-RA pass reorders instructions to pack dual-issue
+    * pairs. Its legality check (isChainedCommutationLegal -> isCommutationLegal)
+    * misses a dependency, so it can move an instruction across a producer of a
+    * value it reads. The dual-issued instruction then reads a stale value,
+    * giving an intermittent, timing-dependent miscompile.
+    *
+    * On a real Tegra X1 (Maxwell, sm_53) this surfaces as dancing black
+    * "knife-cut" artifacts in heavy multi-pass slang shaders (reproduced with
+    * the crt-guest-advanced "deconvergence" final pass under a deko3d backend).
+    * On-device bisection with a per-pass disable mask isolated it: with only
+    * this pass disabled the output is clean; with it enabled (everything else
+    * disabled) the artifacts return.
+    *
+    * The pass is not part of mainline mesa/nouveau, which performs no dual-issue
+    * scheduling; it was imported from karolherbst's never-merged "dual_issue_v3"
+    * branch plus local tweaks. Disabling it restores the known-good mainline
+    * behaviour; the SSA passes still provide the instruction-count reduction.
+    */
+   //RUN_PASS(2, PostRADualIssue, run);
 
    return true;
 }
