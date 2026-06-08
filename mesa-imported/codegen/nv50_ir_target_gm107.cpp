@@ -297,8 +297,9 @@ TargetGM107::canDualIssue(const Instruction *a, const Instruction *b) const
    DualIssueClass ac = getDualIssueClass(a);
    DualIssueClass bc = getDualIssueClass(b);
 
-   // Dual issue is allowed if the first instruction is ALU, and the second is not
-   return ac == ALU && bc != ALU;
+   // Dual issue is allowed if the first instruction is ALU, and the second is not.
+   // GMEM ops are excluded: dual-issuing them gives a stale result on Maxwell.
+   return ac == ALU && bc != ALU && bc != GMEM;
 }
 
 // Return the number of stall counts needed to complete a single instruction.
