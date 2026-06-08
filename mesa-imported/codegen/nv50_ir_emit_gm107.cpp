@@ -3853,6 +3853,8 @@ private:
    inline void emitWrDepBar(Instruction *, uint8_t);
    inline void emitRdDepBar(Instruction *, uint8_t);
    inline void emitWtDepBar(Instruction *, uint8_t);
+   inline void clearWrDepBar(Instruction *);
+   inline void breakDualIssue(Instruction *);
 
    inline int getStall(const Instruction *) const;
    inline int getWrDepBar(const Instruction *) const;
@@ -4079,6 +4081,23 @@ SchedDataCalculatorGM107::commitInsn(const Instruction *insn, int cycle)
 
 #define GM107_MIN_ISSUE_DELAY 0x1
 #define GM107_MAX_ISSUE_DELAY 0xf
+
+// All-ones value of a 3-bit dependency-barrier field, meaning "no barrier".
+#define GM107_NO_DEP_BAR 0x7
+
+inline void
+SchedDataCalculatorGM107::clearWrDepBar(Instruction *insn)
+{
+   insn->sched |= GM107_NO_DEP_BAR << 5; // set the write-dep barrier to none
+}
+
+inline void
+SchedDataCalculatorGM107::breakDualIssue(Instruction *insn)
+{
+   // Pull insn out of a dual-issue pair: clear its stall/yield and give it the
+   // minimum issue delay so its successor runs in its own slot.
+   insn->sched = (insn->sched & ~0x1f) | GM107_MIN_ISSUE_DELAY;
+}
 
 int
 SchedDataCalculatorGM107::calcDelay(const Instruction *insn, int cycle) const
@@ -4312,6 +4331,7 @@ SchedDataCalculatorGM107::insertBarriers(BasicBlock *bb)
    Instruction *insn, *next;
    BitSet bars(6, 1);
    int bar_id;
+   int texBar = -1; // shared texture-pipe counter barrier
 
    for (insn = bb->getEntry(); insn != NULL; insn = next) {
       Instruction *usei = NULL, *defi = NULL;
@@ -4325,7 +4345,8 @@ SchedDataCalculatorGM107::insertBarriers(BasicBlock *bb)
          if (insn->serial >= it->usei->serial) {
             int wr = getWrDepBar(it->insn);
             emitWtDepBar(insn, wr);
-            bars.clr(wr); // free barrier
+            if (wr != texBar)
+               bars.clr(wr); // free barrier (texture counter stays reserved)
             it = live_uses.erase(it);
             continue;
          }
@@ -4355,11 +4376,23 @@ SchedDataCalculatorGM107::insertBarriers(BasicBlock *bb)
          // completing before this insn.
          usei = findFirstUse(insn);
 
-         // Allocate and emit a new barrier.
-         bar_id = bars.findFreeRange(1);
-         if (bar_id == -1)
-            bar_id = 5;
-         bars.set(bar_id);
+         // Allocate and emit a new barrier. Textures share one counter barrier
+         // (consumers wait for it to drain) because a per-texture write barrier
+         // is unreliable when the texture is dual-issued.
+         if (targ->getOpClass(insn->op) == OPCLASS_TEXTURE) {
+            if (texBar == -1) {
+               texBar = bars.findFreeRange(1);
+               if (texBar == -1)
+                  texBar = 5;
+               bars.set(texBar);
+            }
+            bar_id = texBar;
+         } else {
+            bar_id = bars.findFreeRange(1);
+            if (bar_id == -1)
+               bar_id = 5;
+            bars.set(bar_id);
+         }
          emitWrDepBar(insn, bar_id);
          if (usei)
             live_uses.push_back(LiveBarUse(insn, usei));
@@ -4492,6 +4525,50 @@ SchedDataCalculatorGM107::visit(BasicBlock *bb)
       insn->print();
       next->print();
 #endif
+   }
+
+   // A barrier issued from the second dual-issue slot is not honored by the
+   // texture unit, so a co-issued texture must set no barrier:
+   //  - its write (result) barrier is offloaded to the shared texture counter,
+   //    which a following texture keeps live (textures retire in order, so the
+   //    counter wait covers this result too);
+   //  - its read (coordinate) barrier cannot be offloaded, so a texture that
+   //    needs one is un-dual-issued back into its own slot.
+   {
+      Instruction *prevInsn = NULL;
+      for (Instruction *t = bb->getEntry(); t != NULL; prevInsn = t, t = t->next) {
+         if (targ->getOpClass(t->op) != OPCLASS_TEXTURE)
+            continue;
+         if (!prevInsn || getStall(prevInsn) != 0)
+            continue; // not the second slot of a dual-issue
+
+         // Coordinate WAR (read barrier) can't be covered from the second slot.
+         if (getRdDepBar(t) != GM107_NO_DEP_BAR) {
+            breakDualIssue(prevInsn);
+            continue;
+         }
+
+         int wb = getWrDepBar(t);
+         if (wb == GM107_NO_DEP_BAR)
+            continue;
+         bool covered = false;
+         Instruction *jprev = t;
+         for (Instruction *j = t->next; j != NULL; jprev = j, j = j->next) {
+            if (getWtDepBar(j) & (1 << wb))
+               break; // counter drained before a covering texture
+            // The covering texture must keep its barrier, i.e. not be co-issued
+            // itself (a co-issued texture's barrier is dropped below).
+            if (targ->getOpClass(j->op) == OPCLASS_TEXTURE &&
+                getWrDepBar(j) != GM107_NO_DEP_BAR && getStall(jprev) != 0) {
+               covered = true;
+               break;
+            }
+         }
+         if (covered)
+            clearWrDepBar(t); // counter covers this result
+         else
+            breakDualIssue(prevInsn); // no cover: needs its own slot
+      }
    }
 
    if (!insn)
