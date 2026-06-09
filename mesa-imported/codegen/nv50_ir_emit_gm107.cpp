@@ -4534,13 +4534,24 @@ SchedDataCalculatorGM107::visit(BasicBlock *bb)
    //    counter wait covers this result too);
    //  - its read (coordinate) barrier cannot be offloaded, so a texture that
    //    needs one is un-dual-issued back into its own slot.
+   // Surface ops (SULD/SUST) use the same unit and have the same hazard, but are
+   // not tracked by the shared counter, so a co-issued one is simply moved back
+   // into its own slot where its own barrier is honored.
    {
       Instruction *prevInsn = NULL;
       for (Instruction *t = bb->getEntry(); t != NULL; prevInsn = t, t = t->next) {
-         if (targ->getOpClass(t->op) != OPCLASS_TEXTURE)
+         const OpClass tcl = targ->getOpClass(t->op);
+         if (tcl != OPCLASS_TEXTURE && tcl != OPCLASS_SURFACE)
             continue;
          if (!prevInsn || getStall(prevInsn) != 0)
             continue; // not the second slot of a dual-issue
+
+         // A co-issued surface op can neither offload its barrier to the texture
+         // counter nor be covered by it; give it back its own slot.
+         if (tcl == OPCLASS_SURFACE) {
+            breakDualIssue(prevInsn);
+            continue;
+         }
 
          // Coordinate WAR (read barrier) can't be covered from the second slot.
          if (getRdDepBar(t) != GM107_NO_DEP_BAR) {
