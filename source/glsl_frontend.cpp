@@ -487,6 +487,21 @@ glsl_program glsl_program_create(const char* source, pipeline_stage stage)
 		}
 
 		gl_program_parameter_list *pl = linked_shader->Program->Parameters;
+
+		// Resolve STATE_FB_WPOS_Y_TRANSFORM, normally filled in at draw time by the
+		// state tracker; deko3d always renders y-down, so it's constant (1, 0, -1, 0)
+		for (unsigned i = 0; i < pl->NumParameters; i ++)
+		{
+			gl_program_parameter *p = &pl->Parameters[i];
+			if (p->Type != PROGRAM_STATE_VAR)
+				continue;
+			if (p->StateIndexes[0] == STATE_INTERNAL && p->StateIndexes[1] == STATE_FB_WPOS_Y_TRANSFORM)
+			{
+				gl_constant_value *v = pl->ParameterValues + pl->ParameterValueOffset[i];
+				v[0].f = 1.0f; v[1].f = 0.0f; v[2].f = -1.0f; v[3].f = 0.0f;
+			}
+		}
+
 		unsigned last_location = ~0U;
 		bool has_uniforms_in_driver_cbuf = false;
 		for (unsigned i = 0; i < pl->NumParameters; i ++)
